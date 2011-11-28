@@ -158,12 +158,12 @@ public:
 		{
 			instance->SetBossState(BOSS_SHANNOX, NOT_STARTED);
 			enrage = false;
-
-			if (!GetRiplimb()->isAlive())
+			
+			/*if (!GetRiplimb()->isAlive())
 					GetRiplimb()->Respawn();
 			if (!GetRageface()->isAlive())
-                    GetRageface()->Respawn();
-													
+                    GetRageface()->Respawn();*/
+											
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 		}
 
@@ -180,15 +180,14 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
-			_JustDied();
+			//_JustDied();
 			instance->SetBossState(BOSS_SHANNOX, DONE);
 		}
 
         void EnterCombat(Unit* who)
         {
-			_EnterCombat();
+			//_EnterCombat();
 			DoZoneInCombat();
-			instance->SetBossState(BOSS_SHANNOX, IN_PROGRESS);
 			events.Reset();
 
 			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 20000); //TODO Find out the correct Time
@@ -205,7 +204,7 @@ public:
 			if (!me->getVictim()) {}
 
 			events.Update(diff);
-			Creature* tempCreature;
+			//Creature* tempCreature;
 
 			while (uint32 eventId = events.ExecuteEvent())
                 {
@@ -218,7 +217,7 @@ public:
                         case EVENT_ARCING_SLASH:
 							events.RepeatEvent(urand(10000,20000)); //TODO Find out the correct Time
                             break;
-						case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
+						/*case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
 							if(GetRiplimb()->isDead())
 							{
 								// Magma Rupture when Ripclimb is Death
@@ -226,12 +225,12 @@ public:
 							}else
 							{
 								// Hurl Spear when Ripclimb is Alive
-								tempCreature = me->SummonCreature(NPC_SHANNOX_SPEAR,me->GetPositionX(),me->GetPositionY(),me->GetPositionZ()+1 /*+1 Looks better*/);
+								tempCreature = me->SummonCreature(NPC_SHANNOX_SPEAR,me->GetPositionX(),me->GetPositionY(),me->GetPositionZ()+1);
 								tempCreature->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()+urand(-1,1),
-									GetRiplimb()->GetPositionY()+urand(-1,1),GetRiplimb()->GetPositionZ()+urand(-1,1),1 /*XY Speed*/,1 /*z Speed*/);
+									GetRiplimb()->GetPositionY()+urand(-1,1),GetRiplimb()->GetPositionZ()+urand(-1,1),1 ,1 );
 							}
 							events.RepeatEvent(urand(10000,20000)); //TODO Find out the correct Time
-                            break;
+                            break;*/
 						case EVENT_BERSERK:
 							DoCast(me, SPELL_BERSERK);
                             break;
@@ -241,17 +240,17 @@ public:
 			if (!UpdateVictim())
 				return;
 			
-			if((GetRiplimb()->isDead() || GetRageface()->isDead()) && enrage != true)
+			/*if((GetRiplimb()->isDead() || GetRageface()->isDead()) && enrage != true)
 			{
 				DoCast(me, SPELL_BERSERK);
 				me->MonsterTextEmote(SAY_ENRAGE, 0, true);
 				enrage = true;
-			}
+			}*/
 		
 			DoMeleeAttackIfReady();
 		}
 
-		private :
+		/*private :
 		Creature * GetRiplimb()
         {
            return me->GetCreature(*me,instance->GetData64(NPC_RIPLIMB));
@@ -260,7 +259,7 @@ public:
 		Creature * GetRageface()
         {
            return me->GetCreature(*me,instance->GetData64(NPC_RAGEFACE));
-        }
+        }*/
 	};
 };
 
@@ -298,6 +297,7 @@ public:
 		void Reset()
 		{
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+			frenzy = false;
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -310,10 +310,8 @@ public:
 
 		void EnterCombat(Unit * /*who*/)
 		{
-			frenzy = false;
 			events.Reset();
 			events.ScheduleEvent(EVENT_FACE_RAGE, 20000); //TODO Find out the correct Time
-
 		}
 
 		void SelectNewTarget()
@@ -346,11 +344,11 @@ public:
                     }
 				}
 
-			if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
+			/*if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
 			{
 				frenzy = true;
 				DoCast(me, SPELL_FRENZIED_DEVOLUTION);
-			}
+			}*/
 
 			if (!UpdateVictim())
 				return;
@@ -365,10 +363,10 @@ public:
 
 		}
 
-		Creature * GetShannox()
+		/*Creature * GetShannox()
         {
            return me->GetCreature(*me,instance->GetData64(BOSS_SHANNOX));
-        }
+        }*/
 	};
 };
 
@@ -434,11 +432,11 @@ public:
                             break;
                     }
 				}
-			if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
+			/*if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
 			{
 				frenzy = true;
 				DoCast(me, SPELL_FRENZIED_DEVOLUTION);
-			}
+			}*/
 
 			if (!UpdateVictim())
 				return;
@@ -453,10 +451,10 @@ public:
 
 		}
 
-		Creature * GetShannox()
+		/*Creature * GetShannox()
         {
            return me->GetCreature(*me,instance->GetData64(BOSS_SHANNOX));
-        }
+        }*/
 
 
 	};
@@ -521,5 +519,5 @@ void AddSC_boss_shannox()
 	new boss_shannox();
 	new npc_rageface();
 	new npc_riplimb();
-	new npc_shannox_spear();
+	//new npc_shannox_spear();
 }

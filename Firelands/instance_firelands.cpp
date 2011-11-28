@@ -73,9 +73,11 @@ class instance_firelands : public InstanceMapScript
 				RagefaceGUID					 = 0;
 				RagefaceGUID					 = 0;
 
+				for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
+                      Encounter[i] = NOT_STARTED;
 			}
 
-            uint32 TypeToDeadFlag(uint32 type)
+            /*uint32 TypeToDeadFlag(uint32 type)
             {
                   uint32 return_value = 1;
                   for (uint32 i = 0; i < type; i++)
@@ -83,8 +85,9 @@ class instance_firelands : public InstanceMapScript
                        return_value *= 2;
                   }
                   return return_value;
-            }	
-            void OnPlayerKilled(Player* /*player*/)
+            }*/
+
+            /*void OnPlayerKilled(Player* player)
             {
                 for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
                 {
@@ -93,24 +96,7 @@ class instance_firelands : public InstanceMapScript
                        
                     }
                 }
-            }
-
-            bool CheckAchievementCriteriaMeet(uint32 criteria_id, Player const* /*source*/, Unit const* /*target = NULL*/, uint32 /*miscvalue1 = 0*/)
-            {
-                /*switch (criteria_id)
-                {
-                    // Kills without Death Achievement
-                   
-				}
-
-               
-                switch (criteria_id)
-                {
-                   
-                    
-                }*/
-                return false;
-            }
+            }*/
 			
             bool IsEncounterInProgress() const
             {
@@ -122,11 +108,6 @@ class instance_firelands : public InstanceMapScript
 
                 return false;
             }
-
-            /*void FillInitialWorldStates(WorldPacket& data)
-            {
-                
-            }*/
 		
             void OnCreatureCreate(Creature* creature)
             {
@@ -273,12 +254,12 @@ class instance_firelands : public InstanceMapScript
 						return MajordomusGUID;
                     case BOSS_RAGNAROS:
 						return RagnarosGUID;
-                    
+                    /*
 					// Npcs
 					case NPC_RAGEFACE:
 						return RagefaceGUID;
 					case NPC_RIPLIMB:
-						return RiplimbGUID;
+						return RiplimbGUID;*/
                 }
 
                 return 0;
@@ -296,53 +277,17 @@ class instance_firelands : public InstanceMapScript
                 return 0;
             }
 
-            std::string GetSaveData()
-            {
-                OUT_SAVE_INST_DATA;
+        std::string GetSaveData()
+        {
+            std::ostringstream saveStream;
+            saveStream << GetBossSaveData();
+            return saveStream.str();
+        }
 
-                std::ostringstream saveStream;
-                saveStream << "U U " << GetBossSaveData();
-
-                OUT_SAVE_INST_DATA_COMPLETE;
-                return saveStream.str();
-            }
-
-            void Load(char const* strIn)
-            {
-                if (!strIn)
-                {
-                    OUT_LOAD_INST_DATA_FAIL;
-                    return;
-                }
-
-                OUT_LOAD_INST_DATA(strIn);
-
-                char dataHead1, dataHead2;
-                uint32 data1,data2,data3;
-
-                std::istringstream loadStream(strIn);
-                loadStream >> dataHead1 >> dataHead2;
-
-                if (dataHead1 == 'U' && dataHead2 == 'U')
-                {
-                    for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
-                    {
-                        uint32 tmpState;
-                        loadStream >> tmpState;
-                        tmpState = NOT_STARTED;
-                        SetBossState(i, EncounterState(tmpState));
-                    Encounter[i] = tmpState;
-                    }
-                    loadStream >> data1;
-                    loadStream >> data2;
-                    loadStream >> data3;
-
-                    uint32 tmpState, tmpState2;
-                    loadStream >> tmpState >> tmpState2;
-                }
-
-                OUT_LOAD_INST_DATA_COMPLETE;
-            }
+        void Load(const char * data)
+        {
+            std::istringstream loadStream(LoadBossState(data));
+        }
             void Update(uint32 diff)
             {
                 

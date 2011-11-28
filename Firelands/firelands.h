@@ -55,7 +55,7 @@ DATA_RAGEFACE,
 DATA_RIPLIMB,
 };
 
-enum creatures
+enum creaturesIDs
 {
 //bosses
 NPC_BETHTILAC = 52498,
@@ -88,11 +88,6 @@ enum FirelandBosses
     BOSS_RHYOLITH            = 4,
     BOSS_MAJORDOMUS          = 5,
     BOSS_RAGNAROS            = 6,
-};
-
-enum DataVar
-{
-DATA_PHASE,
 };
 
 enum MovePoints
