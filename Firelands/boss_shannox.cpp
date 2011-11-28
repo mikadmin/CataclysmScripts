@@ -87,8 +87,8 @@ enum Spells
  SPELL_ARCTIC_SLASH = 99931, // Inflicts 125% of weapon damage to enemies in front of the caster, and causes a Jagged Tear on the caster's primary target. (Trigger Spell Jagged Tear)
  SPELL_BERSERK = 26662, 
  SPELL_CALL_SPEAR = 100663, // Script Effect Value: 49575
- SPELL_HURL_SPEAR_DUMMY = 100002, // Dummy Effect & Damage
- SPELL_HURL_SPREAR_SUMMON = 99978, //Summons Spear of Shannox
+ SPELL_HURL_SPEAR = 100002, // Dummy Effect & Damage
+ SPELL_HURL_SPEAR_SUMMON = 99978, //Summons Spear of Shannox
  SPELL_HURL_SPEAR_DUMMY_SCRIPT = 100031, //Dummy Value: 99978
  SPELL_JAGGED_TEAR = 99937, //Deals 2500 damage every 3 sec for 24 sec. Stacks.
  SPELL_MAGMA_RUPTURE_SHANNOX = 99840, //Causes a massive explosion of magma, dealing 47500 to 52500 Fire damage to all nearby enemies, increasing Fire damage taken by 40% for 1 min, and triggering eruptions of magma. 
@@ -107,6 +107,7 @@ enum Spells
 
  //Rageface
  SPELL_FACE_RAGE = 99947, //Pins an enemy to the ground, stunning them and tearing at their flesh to deal 38 to 42 damage every 0.5 sec for 30 sec.
+ BUFF_FACE_RAGE = 100129, // I'll hope this is correct
 
  //Spear Abilities
  SPELL_MAGMA_FLARE = 100495, // Inflicts Fire damage to enemies within 50 yards.
@@ -129,7 +130,7 @@ enum Events
 
    //Rageface
    EVENT_FACE_RAGE,
-
+   
 };
 
 // ######### Shannox #########
@@ -180,13 +181,13 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
-			//_JustDied();
-			instance->SetBossState(BOSS_SHANNOX, DONE);
+			//instance->SetBossState(BOSS_SHANNOX, DONE);
+			_JustDied();
 		}
 
         void EnterCombat(Unit* who)
         {
-			//_EnterCombat();
+			_EnterCombat();
 			DoZoneInCombat();
 			events.Reset();
 
@@ -197,6 +198,7 @@ public:
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
 			DoScriptText(SAY_AGGRO, me, who);
+			_EnterCombat();
 		}
 
 		void UpdateAI(const uint32 diff)
@@ -204,33 +206,41 @@ public:
 			if (!me->getVictim()) {}
 
 			events.Update(diff);
-			//Creature* tempCreature;
+			Unit* tempUnit;
 
 			while (uint32 eventId = events.ExecuteEvent())
                 {
 					switch (eventId)
                     {
                         case EVENT_IMMOLTATION_TRAP:
-							DoCast(SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true), SPELL_IMMOLATION_TRAP);
-							events.RepeatEvent(urand(10000,20000)); //TODO Find out the correct Time
+							tempUnit = SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true);
+							//me->CastSpell(SPELL_IMMOLATION_TRAP, tempUnit->GetPositionX(),tempUnit->GetPositionY(),tempUnit->GetPositionZ());
+							events.RepeatEvent(15000); //TODO Find out the correct Time
                             break;
                         case EVENT_ARCING_SLASH:
-							events.RepeatEvent(urand(10000,20000)); //TODO Find out the correct Time
+							DoCast(SPELL_ARCTIC_SLASH);
+							events.RepeatEvent(10000); //TODO Find out the correct Time
                             break;
-						/*case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
-							if(GetRiplimb()->isDead())
+						case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
+							/*if(GetRiplimb()->isDead())
 							{
 								// Magma Rupture when Ripclimb is Death
 								
 							}else
 							{
+								
 								// Hurl Spear when Ripclimb is Alive
 								tempCreature = me->SummonCreature(NPC_SHANNOX_SPEAR,me->GetPositionX(),me->GetPositionY(),me->GetPositionZ()+1);
 								tempCreature->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()+urand(-1,1),
 									GetRiplimb()->GetPositionY()+urand(-1,1),GetRiplimb()->GetPositionZ()+urand(-1,1),1 ,1 );
-							}
-							events.RepeatEvent(urand(10000,20000)); //TODO Find out the correct Time
-                            break;*/
+							}*/
+
+							DoCast(SPELL_HURL_SPEAR_SUMMON);
+							DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
+							DoCast(SPELL_HURL_SPEAR);
+
+							events.RepeatEvent(15000); //TODO Find out the correct Time
+                            break;
 						case EVENT_BERSERK:
 							DoCast(me, SPELL_BERSERK);
                             break;
@@ -281,9 +291,7 @@ public:
 		{
 			instance = me->GetInstanceScript();
 
-			SelectNewTarget();
-
-			const int damageNeededToChangeTarget = 50000;
+			const int damageNeededToAbortRageFace = 50000;
 
 		}
 
@@ -291,13 +299,15 @@ public:
 		EventMap events;
 		Unit* shallTarget;
 		bool frenzy;
+		bool stackerStopper;
 
-		uint32 damageNeededToChangeTarget;
+		uint32 damageNeededToAbortRageFace;
 
 		void Reset()
 		{
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 			frenzy = false;
+			stackerStopper = false;
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -306,12 +316,13 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
+			
 		}
 
 		void EnterCombat(Unit * /*who*/)
 		{
 			events.Reset();
-			events.ScheduleEvent(EVENT_FACE_RAGE, 20000); //TODO Find out the correct Time
+			events.ScheduleEvent(EVENT_FACE_RAGE, 15000); //TODO Find out the correct Time
 		}
 
 		void SelectNewTarget()
@@ -321,9 +332,13 @@ public:
 
 		void DamageTaken(Unit* attacker, uint32 damage)
 			{
-				if (damage >= damageNeededToChangeTarget)
-				{
-					SelectNewTarget();
+				if (damage >= damageNeededToAbortRageFace/* && me->HasAura(BUFF_FACE_RAGE)*/)
+				{	
+					me->MonsterSay("Triggered",0,0);
+					me->RemoveAurasDueToSpell(SPELL_FACE_RAGE);
+					me->getVictim()->ClearUnitState(UNIT_STAT_STUNNED);
+					me->SetTarget(me->Attack(SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true),true));
+					events.ScheduleEvent(EVENT_FACE_RAGE, 15000); //TODO Find out the correct Time
 				}
 			}
 
@@ -339,8 +354,9 @@ public:
                     {
                         case EVENT_FACE_RAGE:
 							DoCastVictim(SPELL_FACE_RAGE);
-							events.RepeatEvent(urand(10000,20000)); //TODO Find out the correct Time
-                            break;
+							//me->getVictim()->SetFlag(UNIT_FIELD_FLAGS,  UNIT_STAT_STUNNED);
+							me->getVictim()->AddUnitState(UNIT_STAT_STUNNED);
+							break;
                     }
 				}
 
@@ -349,6 +365,7 @@ public:
 				frenzy = true;
 				DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 			}*/
+			
 
 			if (!UpdateVictim())
 				return;
@@ -359,8 +376,11 @@ public:
 		void DamageDealt(Unit* /*victim*/, uint32& /*damage*/, DamageEffectType /*damageType*/)
 		{
 			//TODO Set Heroic Condition
+			if (!stackerStopper)
+			{
 			DoCast(me, SPELL_FEEDING_FRENZY_H);
-
+			stackerStopper = true;
+			}
 		}
 
 		/*Creature * GetShannox()
@@ -396,7 +416,7 @@ public:
 		void Reset()
 		{
 			
-			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 		}
 
 		void KilledUnit(Unit * /*victim*/)
