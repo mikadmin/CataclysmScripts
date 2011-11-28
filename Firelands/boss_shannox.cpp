@@ -159,12 +159,8 @@ public:
 		{
 			instance->SetBossState(BOSS_SHANNOX, NOT_STARTED);
 			enrage = false;
-			
-			/*if (!GetRiplimb()->isAlive())
-					GetRiplimb()->Respawn();
-			if (!GetRageface()->isAlive())
-                    GetRageface()->Respawn();*/
-											
+			events.Reset();
+							
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 		}
 
@@ -181,15 +177,20 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
-			//instance->SetBossState(BOSS_SHANNOX, DONE);
+			instance->SetBossState(BOSS_SHANNOX, DONE);
 			_JustDied();
 		}
 
         void EnterCombat(Unit* who)
         {
-			_EnterCombat();
+			instance->SetBossState(BOSS_SHANNOX,IN_PROGRESS);
+
+			if (GetRiplimb()->isDead())
+					GetRiplimb()->Respawn();
+			if (GetRageface()->isDead())
+                    GetRageface()->Respawn();
+						
 			DoZoneInCombat();
-			events.Reset();
 
 			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 20000); //TODO Find out the correct Time
 			events.ScheduleEvent(EVENT_ARCING_SLASH, 10000);  //TODO Find out the correct Time
@@ -198,6 +199,7 @@ public:
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
 			DoScriptText(SAY_AGGRO, me, who);
+
 			_EnterCombat();
 		}
 
@@ -219,7 +221,7 @@ public:
                             break;
                         case EVENT_ARCING_SLASH:
 							DoCast(SPELL_ARCTIC_SLASH);
-							events.RepeatEvent(10000); //TODO Find out the correct Time
+							events.ScheduleEvent(EVENT_ARCING_SLASH, 10000);  //TODO Find out the correct Time
                             break;
 						case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
 							/*if(GetRiplimb()->isDead())
@@ -260,16 +262,16 @@ public:
 			DoMeleeAttackIfReady();
 		}
 
-		/*private :
-		Creature * GetRiplimb()
+		
+		Creature* GetRiplimb()
         {
            return me->GetCreature(*me,instance->GetData64(NPC_RIPLIMB));
         }
 
-		Creature * GetRageface()
+		Creature* GetRageface()
         {
            return me->GetCreature(*me,instance->GetData64(NPC_RAGEFACE));
-        }*/
+        }
 	};
 };
 
@@ -497,14 +499,15 @@ public:
 		npc_shannox_spearAI(Creature *c) : ScriptedAI(c)
 		{
 			instance = me->GetInstanceScript();
+
+			me->SetReactState(REACT_PASSIVE);
+			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 		}
 
 		InstanceScript* instance;
 
 		void Reset()
 		{
-			me->SetReactState(REACT_PASSIVE);
-			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -527,7 +530,7 @@ public:
 				return;
 		}
 
-		Creature * GetShannox()
+		Creature* GetShannox()
         {
            return me->GetCreature(*me,instance->GetData64(BOSS_SHANNOX));
         }
@@ -539,5 +542,5 @@ void AddSC_boss_shannox()
 	new boss_shannox();
 	new npc_rageface();
 	new npc_riplimb();
-	//new npc_shannox_spear();
+	new npc_shannox_spear();
 }

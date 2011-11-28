@@ -205,9 +205,8 @@ class instance_firelands : public InstanceMapScript
 					case BOSS_SHANNOX:
 						if (type=IN_PROGRESS)
 						{
-
+							
 						}
-
 						break;
 					case BOSS_BALOROC:
 						break;
@@ -254,12 +253,12 @@ class instance_firelands : public InstanceMapScript
 						return MajordomusGUID;
                     case BOSS_RAGNAROS:
 						return RagnarosGUID;
-                    /*
+                    
 					// Npcs
 					case NPC_RAGEFACE:
 						return RagefaceGUID;
 					case NPC_RIPLIMB:
-						return RiplimbGUID;*/
+						return RiplimbGUID;
                 }
 
                 return 0;
