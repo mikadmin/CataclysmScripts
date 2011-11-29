@@ -160,7 +160,17 @@ public:
 			instance->SetBossState(BOSS_SHANNOX, NOT_STARTED);
 			enrage = false;
 			events.Reset();
-							
+			
+			Creature* tempCreature;
+
+			tempCreature = GetRiplimb();
+			if(tempCreature != 0)
+				tempCreature -> Respawn();
+						
+			tempCreature = GetRageface();
+			if(tempCreature != 0)
+				tempCreature -> Respawn();
+
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 		}
 
@@ -184,11 +194,6 @@ public:
         void EnterCombat(Unit* who)
         {
 			instance->SetBossState(BOSS_SHANNOX,IN_PROGRESS);
-
-			if (GetRiplimb()->isDead())
-					GetRiplimb()->Respawn();
-			if (GetRageface()->isDead())
-                    GetRageface()->Respawn();
 						
 			DoZoneInCombat();
 
@@ -238,8 +243,10 @@ public:
 							}*/
 
 							DoCast(SPELL_HURL_SPEAR_SUMMON);
+							DoZoneInCombat();
 							DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
 							DoCast(SPELL_HURL_SPEAR);
+
 
 							events.RepeatEvent(15000); //TODO Find out the correct Time
                             break;
@@ -520,6 +527,9 @@ public:
 
 		void EnterCombat(Unit * /*who*/)
 		{
+			me->MonsterSay("Spear Triggered (Now in Combat!)",0,0);
+			DoCast(SPELL_MAGMA_FLARE);
+			DoCast(SPELL_MAGMA_FLARE);
 		}
 
 		void UpdateAI(const uint32 diff)
