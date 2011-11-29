@@ -261,7 +261,7 @@ public:
 				return RiplimbGUID;
 			}
 
-			return 0;
+			return NULL;
 		}
 
 		uint32 GetData(uint32 type)
@@ -276,7 +276,7 @@ public:
 			return 0;
 		}
 
-		std::string GetSaveData()
+		/*std::string GetSaveData()
 		{
 			std::ostringstream saveStream;
 			saveStream << GetBossSaveData();
@@ -286,11 +286,11 @@ public:
 		void Load(const char * data)
 		{
 			std::istringstream loadStream(LoadBossState(data));
-		}
-		void Update(uint32 diff)
+		}*/
+		/*void Update(uint32 diff)
 		{
 
-		}
+		}*/
 	};
 
 	InstanceScript* GetInstanceScript(InstanceMap* map) const

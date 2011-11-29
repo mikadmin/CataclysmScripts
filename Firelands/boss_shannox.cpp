@@ -75,12 +75,12 @@ Your face is being mauled.
 #include "ScriptPCH.h"
 #include "firelands.h"
 
-enum Yells //need texts and sound ids
+enum Yells
 {
-	SAY_AGGRO                                    = -1999970,
-	SAY_SOFT_ENRAGE								 = -1999971, //TODO Add Sound
-	SAY_ON_DOGS_FALL							 = -1999972, //TODO Add Sound
-	SAY_ON_DEAD									 = -1999973, //TODO Add Sound
+	SAY_AGGRO                                    = -1999971,
+	SAY_SOFT_ENRAGE								 = -1999972, //TODO Add Sound
+	SAY_ON_DOGS_FALL							 = -1999973, //TODO Add Sound
+	SAY_ON_DEAD									 = -1999974, //TODO Add Sound
 };
 
 enum Spells
@@ -158,38 +158,35 @@ public:
 
 		InstanceScript* instance;
 		bool enrage;
-		Creature* tempCreature;
-
+		
 		void Reset()
 		{
 			//instance->SetBossState(BOSS_SHANNOX, NOT_STARTED);
 			enrage = false;
 			events.Reset();
 						
-			tempCreature = GetRiplimb();
-			if(tempCreature != 0)
+			if(GetRiplimb() != NULL)  // Prevents Crashes
 			{
-				if (tempCreature->isDead())
-				tempCreature -> Respawn();
+				if (GetRiplimb()->isDead())
+					GetRiplimb() -> Respawn();
 			}
 
-			tempCreature = GetRageface();
-			if(tempCreature != 0)
+			if(GetRageface() != NULL)  // Prevents Crashes
 			{
-				if (tempCreature->isDead())
-				tempCreature -> Respawn();
+				if (GetRageface()->isDead())
+					GetRageface() -> Respawn();
 			}
 
+			me->GetMotionMaster()->MoveTargetedHome();
 
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 		}
 
-		/*void JustSummoned(Creature* summon)
+		void JustSummoned(Creature* summon)
 		{
 		summons.Summon(summon);
 		summon->setActive(true);
-		summon->AI()->DoZoneInCombat();
-		}*/
+		}
 
 		void KilledUnit(Unit * /*victim*/)
 		{
@@ -197,9 +194,9 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
-			
+
 			instance->SetBossState(BOSS_SHANNOX, DONE);
-			DoScriptText(SAY_ON_DEAD, me, 0);
+			DoScriptText(SAY_ON_DEAD, me);
 			_JustDied();
 		}
 
@@ -208,7 +205,7 @@ public:
 			instance->SetBossState(BOSS_SHANNOX,IN_PROGRESS);
 
 			DoZoneInCombat();
-
+			
 			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 20000); //TODO Find out the correct Time
 			events.ScheduleEvent(EVENT_ARCING_SLASH, 10000);  //TODO Find out the correct Time
 			events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 20000); //TODO Find out the correct Time
@@ -216,6 +213,8 @@ public:
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
 			DoScriptText(SAY_AGGRO, me);
+
+			
 
 			_EnterCombat();
 		}
@@ -225,14 +224,12 @@ public:
 			if (!me->getVictim()) {}
 
 			events.Update(diff);
-			Unit* tempUnit;
-
 			while (uint32 eventId = events.ExecuteEvent())
 			{
 				switch (eventId)
 				{
 				case EVENT_IMMOLTATION_TRAP:
-					tempUnit = SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true);
+					//tempUnit = SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true);
 					//me->CastSpell(SPELL_IMMOLATION_TRAP, tempUnit->GetPositionX(),tempUnit->GetPositionY(),tempUnit->GetPositionZ());
 					events.RepeatEvent(15000); //TODO Find out the correct Time
 					break;
@@ -268,21 +265,25 @@ public:
 				}
 			}
 
+			//delete tempUnit;
+
 			if (!UpdateVictim())
 				return;
-
-			if ((GetRiplimb()->isDead() || GetRageface()->isDead()) && !enrage)
+			if (GetRageface() != NULL && GetRiplimb() != NULL) // Prevents Crashes
 			{
-			DoCast(me, SPELL_FRENZY_SHANNOX);
-			DoScriptText(SAY_ON_DOGS_FALL, me, 0);
-			me->MonsterTextEmote(SAY_SOFT_ENRAGE, 0, true);
-			enrage = true;
+				if ((GetRiplimb()->isDead() || GetRageface()->isDead()) && !enrage)
+				{
+					DoCast(me, SPELL_FRENZY_SHANNOX);
+					DoScriptText(SAY_ON_DOGS_FALL, me);
+					me->MonsterTextEmote(SAY_SOFT_ENRAGE, 0, true);
+					enrage = true;
 
-			DoMeleeAttackIfReady();
+					DoMeleeAttackIfReady();
+				}
 			}
 		}
 
-		
+
 		Creature* GetRiplimb()
 		{
 			return me->GetCreature(*me,instance->GetData64(NPC_RIPLIMB));
@@ -313,7 +314,7 @@ public:
 		{
 			instance = me->GetInstanceScript();
 
-			const int damageNeededToAbortRageFace = 50000;
+			shallTarget = NULL;
 
 		}
 
@@ -323,13 +324,13 @@ public:
 		bool frenzy;
 		bool stackerStopper;
 
-		uint32 damageNeededToAbortRageFace;
-
 		void Reset()
 		{
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 			frenzy = false;
 			stackerStopper = false;
+
+			me->GetMotionMaster()->MoveTargetedHome();
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -348,12 +349,12 @@ public:
 
 		void SelectNewTarget()
 		{
-			shallTarget = SelectTarget(SELECT_TARGET_RANDOM, 1, 200, true);
+			shallTarget = SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true);
 		}
 
 		void DamageTaken(Unit* attacker, uint32 damage)
 		{
-			if (damage >= damageNeededToAbortRageFace/* && me->HasAura(BUFF_FACE_RAGE)*/)
+			if (damage >= 50000/* && me->HasAura(BUFF_FACE_RAGE)*/)
 			{	
 				me->MonsterSay("Triggered",0,0);
 				me->RemoveAurasDueToSpell(SPELL_FACE_RAGE);
@@ -381,12 +382,14 @@ public:
 				}
 			}
 
-			/*if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
+			if(GetShannox() != NULL)
+			{
+			if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
 			{
 			frenzy = true;
 			DoCast(me, SPELL_FRENZIED_DEVOLUTION);
-			}*/
-
+			}
+			}
 
 			if (!UpdateVictim())
 				return;
@@ -409,10 +412,7 @@ public:
 		{
 			return me->GetCreature(*me,instance->GetData64(NPC_SHANNOX));
 		}
-		UnitAI* GetShannoxAI()
-		{
-			return me->GetCreature(*me,instance->GetData64(NPC_SHANNOX))->GetAI();
-		}
+
 	};
 };
 
@@ -441,8 +441,9 @@ public:
 
 		void Reset()
 		{
-
 			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+			me->GetMotionMaster()->MoveTargetedHome();
+			frenzy = false;
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -457,7 +458,6 @@ public:
 		{	
 			events.Reset();
 			events.ScheduleEvent(EVENT_LIMB_RIP, 5000); //TODO Find out the correct Time
-			frenzy = false;
 		}
 
 		void UpdateAI(const uint32 diff)
@@ -478,11 +478,15 @@ public:
 					break;
 				}
 			}
-			/*if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
+
+			if(GetShannox() != NULL)
+			{
+			if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
 			{
 			frenzy = true;
 			DoCast(me, SPELL_FRENZIED_DEVOLUTION);
-			}*/
+			}
+			}
 
 			if (!UpdateVictim())
 				return;
