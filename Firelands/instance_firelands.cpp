@@ -276,7 +276,7 @@ public:
 			return 0;
 		}
 
-		/*std::string GetSaveData()
+		std::string GetSaveData()
 		{
 			std::ostringstream saveStream;
 			saveStream << GetBossSaveData();
@@ -286,7 +286,8 @@ public:
 		void Load(const char * data)
 		{
 			std::istringstream loadStream(LoadBossState(data));
-		}*/
+		}
+
 		/*void Update(uint32 diff)
 		{
 
@@ -298,7 +299,6 @@ public:
 		return new instance_firelands_InstanceMapScript(map);
 	}
 };
-
 
 void AddSC_instance_firelands()
 {

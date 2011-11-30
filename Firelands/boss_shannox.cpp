@@ -20,57 +20,28 @@
 */
 
 /*###########################
-#                           #
-#   Developer Info:         #
+#      Developer Info:      #
 #   Script Coded by Naios   #
-#   11/2011                 #
 #                           #
-#   Script Complete: 20%    #
-#   Tested on Trillium EMU  #
-#                           #
+#   Script Complete: 22%    #
+#  Works with Trillium EMU  #
+#     & Strawberry Core     #
 ###########################*/
 
-
-/*
-Notes:
-
-Shannox 53691
-Wadenbeißer 53694
-Augenkratzer 53695
-Kristallgefangnisfalle 53713
-Spear of Shannox 53752
-
-Magma Rupture
-Fire damage taken increased by 40%.
-1 minute remaining
-
-Frenzy Shannox
-Physical damage dealt is increased by 219 to 281.
-Attack speed increased by 50%.
-10 minutes remaining
-
-Dogged Determination
-Filled with a sense of purpose, unable to be
-slowed below 50% of normal movement speed
-
-Frenzy Riplimb
-Physical damage dealt is increased by 30%.
-Attack speed increased by 30%.
-
-Frenzied Devotion Riplimb
-All damage dealt is increased by 400%.
-Attack and movement speeds increased by 200%.
-
-Feeding Frenzy
-Successful melee attacks grant a stacking
-5% bonus to physical damage dealt for 20 sec.
-
-Face Rage
-Your face is being mauled.
-30 seconds remaining
-
-######################################## */
-
+/* TODO:
+- [50% DONE] Insert Heroic Spells
+- Insert the Sound data
+- The Script Crashes sometimes (I'm not sure weather this
+  is the fault of this Script or the Core)
+- Add Handling for Hurling the Spear
+- Add Trigger for the 'Seperation Anxietly' Spell
+- Add Trigger for the Fire Nova when the Spear is reaching the Ground
+- Add Action that Shannox throws the Spear to Riplimb
+- Add Action that Riplimb is taking the Spear back to Shannox
+- The 'Feeding Frenzy Buff' Stacks too fast
+- Add Kristall Trap Actions
+- Add Fire Trap Actions
+*/
 
 #include "ScriptPCH.h"
 #include "firelands.h"
@@ -127,7 +98,7 @@ enum Events
 	EVENT_BERSERK,
 	EVENT_ARCING_SLASH,
 	EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE,
-
+	EVENT_SUMMON_SPEAR,
 	//Riplimb
 	EVENT_LIMB_RIP,
 
@@ -136,7 +107,10 @@ enum Events
 
 };
 
-// ######### Shannox #########
+
+/*#########################
+######### Shannox #########
+#########################*/
 
 class boss_shannox : public CreatureScript
 {
@@ -154,17 +128,19 @@ public:
 		{
 			instance = me->GetInstanceScript();
 			// TODO Add not Tauntable Flag
+
+			Reset();
 		}
 
 		InstanceScript* instance;
 		bool enrage;
-		
+
 		void Reset()
 		{
-			//instance->SetBossState(BOSS_SHANNOX, NOT_STARTED);
+			instance->SetBossState(BOSS_SHANNOX, NOT_STARTED);
 			enrage = false;
 			events.Reset();
-						
+
 			if(GetRiplimb() != NULL)  // Prevents Crashes
 			{
 				if (GetRiplimb()->isDead())
@@ -179,14 +155,14 @@ public:
 
 			me->GetMotionMaster()->MoveTargetedHome();
 
-			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 		}
 
-		void JustSummoned(Creature* summon)
+		/*void JustSummoned(Creature* summon)
 		{
 		summons.Summon(summon);
 		summon->setActive(true);
-		}
+		}*/
 
 		void KilledUnit(Unit * /*victim*/)
 		{
@@ -205,16 +181,16 @@ public:
 			instance->SetBossState(BOSS_SHANNOX,IN_PROGRESS);
 
 			DoZoneInCombat();
-			
+
 			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 20000); //TODO Find out the correct Time
 			events.ScheduleEvent(EVENT_ARCING_SLASH, 10000);  //TODO Find out the correct Time
 			events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 20000); //TODO Find out the correct Time
 
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
-			DoScriptText(SAY_AGGRO, me);
+			DoScriptText(SAY_AGGRO, me, who);
 
-			
+
 
 			_EnterCombat();
 		}
@@ -238,26 +214,23 @@ public:
 					events.ScheduleEvent(EVENT_ARCING_SLASH, 10000);  //TODO Find out the correct Time
 					break;
 				case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
-					/*if(GetRiplimb()->isDead())
-					{
-					// Magma Rupture when Ripclimb is Death
+					if(GetRiplimb()->isDead())
+					{ // Magma Rupture when Ripclimb is Death
+						DoCast(SPELL_MAGMA_RUPTURE_SHANNOX);
 
 					}else
-					{
+					{ // Hurl Spear when Riplimb is Alive
 
-					// Hurl Spear when Ripclimb is Alive
-					tempCreature = me->SummonCreature(NPC_SHANNOX_SPEAR,me->GetPositionX(),me->GetPositionY(),me->GetPositionZ()+1);
-					tempCreature->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()+urand(-1,1),
-					GetRiplimb()->GetPositionY()+urand(-1,1),GetRiplimb()->GetPositionZ()+urand(-1,1),1 ,1 );
-					}*/
+						DoCast(SPELL_HURL_SPEAR);
+						events.ScheduleEvent(EVENT_SUMMON_SPEAR, 1500);
 
+					}
+					events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 20000); //Corrects Time is 43s
+					break;
+				case EVENT_SUMMON_SPEAR:
 					DoCast(SPELL_HURL_SPEAR_SUMMON);
-					DoZoneInCombat();
 					DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
-					DoCast(SPELL_HURL_SPEAR);
-
-
-					events.RepeatEvent(15000); //TODO Find out the correct Time
+					DoZoneInCombat();
 					break;
 				case EVENT_BERSERK:
 					DoCast(me, SPELL_BERSERK);
@@ -277,10 +250,10 @@ public:
 					DoScriptText(SAY_ON_DOGS_FALL, me);
 					me->MonsterTextEmote(SAY_SOFT_ENRAGE, 0, true);
 					enrage = true;
-
-					DoMeleeAttackIfReady();
 				}
 			}
+
+			DoMeleeAttackIfReady();
 		}
 
 
@@ -296,7 +269,9 @@ public:
 	};
 };
 
-// ##### Rageface (Augenkratzer) #####
+/*#########################
+######## Rageface #########
+#########################*/
 
 class npc_rageface : public CreatureScript
 {
@@ -313,9 +288,9 @@ public:
 		npc_ragefaceAI(Creature *c) : ScriptedAI(c)
 		{
 			instance = me->GetInstanceScript();
-
 			shallTarget = NULL;
 
+			Reset();
 		}
 
 		InstanceScript* instance;
@@ -323,6 +298,7 @@ public:
 		Unit* shallTarget;
 		bool frenzy;
 		bool stackerStopper;
+		bool doggedDeterminaton;
 
 		void Reset()
 		{
@@ -345,15 +321,22 @@ public:
 		{
 			events.Reset();
 			events.ScheduleEvent(EVENT_FACE_RAGE, 15000); //TODO Find out the correct Time
+
+			doggedDeterminaton = false;
 		}
 
 		void SelectNewTarget()
 		{
 			shallTarget = SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true);
+			me->AddThreat(shallTarget, 500.0f);
+            me->Attack(shallTarget, true);
+            me->GetMotionMaster()->MoveChase(shallTarget);
 		}
 
 		void DamageTaken(Unit* attacker, uint32 damage)
 		{
+			me->MonsterSay("Triggered Damage Taken",0,0);
+
 			if (damage >= 50000/* && me->HasAura(BUFF_FACE_RAGE)*/)
 			{	
 				me->MonsterSay("Triggered",0,0);
@@ -384,11 +367,28 @@ public:
 
 			if(GetShannox() != NULL)
 			{
-			if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
-			{
-			frenzy = true;
-			DoCast(me, SPELL_FRENZIED_DEVOLUTION);
-			}
+				if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
+				{
+					frenzy = true;
+					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
+				}
+
+				if(GetShannox()->GetDistance2d(me)>=40) //TODO Sniff right Distance
+				{
+					//DoCast(me, SPELL_DOGGED_DETERMINATION);
+					doggedDeterminaton = true;
+					me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),
+						GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
+				}
+
+				if (doggedDeterminaton && GetShannox()->GetDistance2d(me) < 35)
+				{
+					me->GetMotionMaster()->Clear();
+					doggedDeterminaton = false;
+					//me->RemoveAurasDueToSpell(SPELL_DOGGED_DETERMINATION);
+					
+					
+				}
 			}
 
 			if (!UpdateVictim())
@@ -399,12 +399,9 @@ public:
 
 		void DamageDealt(Unit* /*victim*/, uint32& /*damage*/, DamageEffectType /*damageType*/)
 		{
-			//TODO Set Heroic Condition
-			if (!stackerStopper)
-			{
+			// Feeding Frenzy (Heroic Ability)
+			if(me->GetMap()->IsHeroic())
 				DoCast(me, SPELL_FEEDING_FRENZY_H);
-				stackerStopper = true;
-			}
 		}
 
 
@@ -416,7 +413,9 @@ public:
 	};
 };
 
-// ##### Riplimb (Wadenkratzer) #####
+/*#########################
+######### Riplimb #########
+#########################*/
 
 class npc_riplimb : public CreatureScript
 {
@@ -433,6 +432,8 @@ public:
 		npc_riplimbAI(Creature *c) : ScriptedAI(c)
 		{
 			instance = me->GetInstanceScript();
+
+			Reset();
 		}
 
 		InstanceScript* instance;
@@ -473,19 +474,24 @@ public:
 				case EVENT_LIMB_RIP:
 					DoScriptText(SAY_AGGRO, me);
 					DoCastVictim(SPELL_LIMB_RIP);	
-
-					events.RepeatEvent(urand(10000,20000)); //TODO Find out the correct Time
+					events.ScheduleEvent(EVENT_LIMB_RIP, 5000); //TODO Find out the correct Time
 					break;
 				}
 			}
 
 			if(GetShannox() != NULL)
 			{
-			if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
-			{
-			frenzy = true;
-			DoCast(me, SPELL_FRENZIED_DEVOLUTION);
-			}
+				if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
+				{
+					frenzy = true;
+					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
+				}
+				
+				if(GetShannox()->GetDistance2d(me)>=5) //TODO Sniff right Distance
+				{
+					DoCast(me, SPELL_DOGGED_DETERMINATION);
+					me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
+				}
 			}
 
 			if (!UpdateVictim())
@@ -496,9 +502,9 @@ public:
 
 		void DamageDealt(Unit* /*victim*/, uint32& /*damage*/, DamageEffectType /*damageType*/)
 		{
-			//TODO Set Heroic Condition
-			DoCast(me, SPELL_FEEDING_FRENZY_H);
-
+			// Feeding Frenzy (Heroic Ability)
+			if(me->GetMap()->IsHeroic())
+				DoCast(me, SPELL_FEEDING_FRENZY_H);
 		}
 
 		Creature* GetShannox()
@@ -510,7 +516,9 @@ public:
 	};
 };
 
-// ######## Shannox Spear ########
+/*#########################
+###### Shannox Spear ######
+#########################*/
 
 class npc_shannox_spear : public CreatureScript
 {
@@ -549,7 +557,7 @@ public:
 		void EnterCombat(Unit * /*who*/)
 		{
 			me->MonsterSay("Spear Triggered (Now in Combat!)",0,0);
-			DoCast(SPELL_MAGMA_FLARE);
+			DoCast(SPELL_MAGMA_RUPTURE);
 			DoCast(SPELL_MAGMA_FLARE);
 		}
 
@@ -568,10 +576,51 @@ public:
 	};
 };
 
+/*#########################
+####### Achievements ######
+#########################*/
+
+//Heroic Shannox (5806)
+class achievement_heroic_shannox : public AchievementCriteriaScript
+{
+   public:
+       achievement_heroic_shannox() : AchievementCriteriaScript("achievement_heroic_shannox")
+       {
+       }
+
+       bool OnCheck(Player* player, Unit* target)
+       {
+           if (!target)
+               return false;
+
+		   return player->GetMap()->IsHeroic() && player->
+			   GetInstanceScript()->GetBossState(BOSS_SHANNOX == DONE);
+       }
+};
+
+//Bucket List (5829) //TODO Currently not Working!
+class achievement_bucket_list : public AchievementCriteriaScript
+{
+   public:
+       achievement_bucket_list() : AchievementCriteriaScript("achievement_bucket_list")
+       {
+       }
+
+       bool OnCheck(Player* /*player*/, Unit* target)
+       {
+           if (!target)
+               return false;
+
+           return false;
+       }
+};
+
 void AddSC_boss_shannox()
 {
 	new boss_shannox();
 	new npc_rageface();
 	new npc_riplimb();
-	new npc_shannox_spear();
+	new achievement_bucket_list();
+	new achievement_heroic_shannox();
+	//new npc_shannox_spear();
 }
