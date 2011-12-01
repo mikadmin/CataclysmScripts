@@ -16,10 +16,14 @@ INSERT INTO `access_requirement` (`mapId`, `difficulty`, `level_min`, `level_max
 INSERT INTO `access_requirement` (`mapId`, `difficulty`, `level_min`, `level_max`, `item`, `item2`, `quest_done_A`, `quest_done_H`, `completed_achievement`, `quest_failed_text`, `comment`) VALUES (720, 3, 85, 0, 0, 0, 0, 0, 0, NULL, 'Firelands (Enterence)');
 
 -- ### Set Scriptnames ###
+-- Shannox
 UPDATE `creature_template` SET `ScriptName`='boss_shannox' WHERE `entry`=53691 LIMIT 1;
 UPDATE `creature_template` SET `ScriptName`='npc_rageface' WHERE `entry`=53695 LIMIT 1;
 UPDATE `creature_template` SET `ScriptName`='npc_riplimb' WHERE `entry`=53694 LIMIT 1;
 UPDATE `creature_template` SET `ScriptName`='npc_shannox_spear' WHERE `entry`=53752 LIMIT 1;
+
+-- Bethilac
+UPDATE `creature_template` SET `ScriptName`='boss_bethtilac' WHERE `entry`=52498 LIMIT 1;
 
 -- ### Set Script_Texts ###
 -- # Shannox #

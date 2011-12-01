@@ -74,11 +74,9 @@ NPC_SHANNOX_SPEAR = 53752, // Shannox Spear
 
 };
 
-enum FirelandBosses
+enum Encounter
 {
-    MAX_ENCOUNTER            = 7,
-
-    BOSS_BALOROC             = 0,
+	BOSS_BALOROC             = 0,
     BOSS_SHANNOX             = 1,
     BOSS_ALYSRAZAR           = 2,
     BOSS_BETHTILAC           = 3,

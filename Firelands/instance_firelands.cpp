@@ -27,6 +27,8 @@
 #include "CreatureAI.h"
 #include "firelands.h"
 
+#define MAX_ENCOUNTER  7
+
 class instance_firelands : public InstanceMapScript
 {
 public:
@@ -37,22 +39,20 @@ public:
 		instance_firelands_InstanceMapScript(InstanceMap* map) : InstanceScript(map) { }
 
 		uint32 Encounter[MAX_ENCOUNTER];
-		std::string m_strInstData;
-		//std::set<uint64> mRubbleSpawns;
 
 		// Creatures
 		//Bosses
-		uint64 BethilacGUID;
-		uint64 RhyolithGUID;
-		uint64 AlysrazarGUID;
-		uint64 ShannoxGUID;
-		uint64 BalorocGUID;
-		uint64 MajordomusGUID;
-		uint64 RagnarosGUID;
+		uint64 uiBethilac;
+		uint64 uiRhyolith;
+		uint64 uiAlysrazar;
+		uint64 uiShannox;
+		uint64 uiBaloroc;
+		uint64 uiMajordomus;
+		uint64 uiRagnaros;
 
 		//Npcs
-		uint64 RiplimbGUID;
-		uint64 RagefaceGUID;
+		uint64 uiRiplimb;
+		uint64 uiRageface;
 
 		// GameObjects
 
@@ -61,42 +61,21 @@ public:
 		void Initialize()
 		{
 			SetBossNumber(MAX_ENCOUNTER);
-			//LoadDoorData(doorData);
-			BethilacGUID                     = 0;
-			RhyolithGUID		             = 0;
-			AlysrazarGUID		             = 0;
-			ShannoxGUID					     = 0;
-			BalorocGUID                      = 0;
-			MajordomusGUID                   = 0;
-			RagnarosGUID                     = 0;
+			
+			uiBethilac                     = 0;
+			uiRhyolith		             = 0;
+			uiAlysrazar		             = 0;
+			uiShannox					     = 0;
+			uiBaloroc                      = 0;
+			uiMajordomus                   = 0;
+			uiRagnaros                     = 0;
 
-			RagefaceGUID					 = 0;
-			RagefaceGUID					 = 0;
+			uiRiplimb					 = 0;
+			uiRageface					 = 0;
 
 			for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
 				Encounter[i] = NOT_STARTED;
 		}
-
-		/*uint32 TypeToDeadFlag(uint32 type)
-		{
-		uint32 return_value = 1;
-		for (uint32 i = 0; i < type; i++)
-		{
-		return_value *= 2;
-		}
-		return return_value;
-		}*/
-
-		/*void OnPlayerKilled(Player* player)
-		{
-		for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
-		{
-		if (Encounter[i] == IN_PROGRESS)
-		{
-
-		}
-		}
-		}*/
 
 		bool IsEncounterInProgress() const
 		{
@@ -115,33 +94,33 @@ public:
 			{
 				// Bosses
 			case NPC_BETHTILAC:
-				BethilacGUID = creature->GetGUID();
+				uiBethilac = creature->GetGUID();
 				break;
 			case NPC_RHYOLITH:
-				RhyolithGUID = creature->GetGUID();
+				uiRhyolith = creature->GetGUID();
 				break;
 			case NPC_ALYSRAZAR:
-				AlysrazarGUID = creature->GetGUID();
+				uiAlysrazar = creature->GetGUID();
 				break;
 			case NPC_SHANNOX:
-				ShannoxGUID = creature->GetGUID();
+				uiShannox = creature->GetGUID();
 				break;
 			case NPC_BALOROC:
-				BalorocGUID = creature->GetGUID();
+				uiBaloroc = creature->GetGUID();
 				break;
 			case NPC_MAJORDOMUS:
-				MajordomusGUID = creature->GetGUID();
+				uiMajordomus = creature->GetGUID();
 				break;
 			case NPC_RAGNAROS_CATA:
-				RagnarosGUID = creature->GetGUID();
+				uiRagnaros = creature->GetGUID();
 				break;
 
 				// Npcs
 			case NPC_RAGEFACE:
-				RagefaceGUID = creature->GetGUID();
+				uiRageface = creature->GetGUID();
 				break;
 			case NPC_RIPLIMB:
-				RiplimbGUID = creature->GetGUID();
+				uiRiplimb = creature->GetGUID();
 				break;
 
 			}
@@ -150,21 +129,10 @@ public:
 
 		void OnGameObjectCreate(GameObject* gameObject)
 		{
-			/*switch (gameObject->GetEntry())
-			{
-			case GO_ASSEMBLY_DOOR:
-			AssemblyDoorGUID = gameObject->GetGUID();
-			HandleGameObject(NULL, true, gameObject);
-			break;
-			}*/
 		}
 
 		void OnGameObjectRemove(GameObject* gameObject)
 		{
-			/*switch (gameObject->GetEntry())
-			{
-
-			}*/
 		}
 
 		void OnCreatureDeath(Creature* creature)
@@ -172,6 +140,8 @@ public:
 			switch (creature->GetEntry())
 			{
 			case NPC_BETHTILAC:
+				//SetBossState();
+				break;
 			case NPC_RHYOLITH:
 			case NPC_ALYSRAZAR:
 			case NPC_SHANNOX:
@@ -183,18 +153,12 @@ public:
 			}
 		}
 
-		void ProcessEvent(WorldObject* /*gameObject*/, uint32 eventId)
-		{
-
-		}
-
-
 		bool SetBossState(uint32 type, EncounterState state)
 		{
 			if (!InstanceScript::SetBossState(type, state))
 				return false;
 
-			switch (type)
+			/*switch (type)
 			{
 			case BOSS_BETHTILAC:
 				break;
@@ -215,7 +179,7 @@ public:
 			case BOSS_RAGNAROS:
 				break;
 
-			}
+			}*/
 
 			return true;
 		}
@@ -236,7 +200,7 @@ public:
 
 		uint64 GetData64(uint32 data)
 		{
-			switch (data)
+			/*switch (data)
 			{
 				// Bosses
 			case NPC_BETHTILAC:
@@ -259,7 +223,7 @@ public:
 				return RagefaceGUID;
 			case NPC_RIPLIMB:
 				return RiplimbGUID;
-			}
+			}*/
 
 			return NULL;
 		}
@@ -276,23 +240,38 @@ public:
 			return 0;
 		}
 
-		std::string GetSaveData()
-		{
-			std::ostringstream saveStream;
-			saveStream << GetBossSaveData();
-			return saveStream.str();
-		}
+        std::string GetSaveData()
+        {
+            std::ostringstream saveStream;
+            saveStream << "F L ";
+            for(int i = 0; i < MAX_ENCOUNTER; ++i)
+                saveStream << Encounter[i] << " ";
+
+            return saveStream.str();
+        }
 
 		void Load(const char * data)
-		{
-			std::istringstream loadStream(LoadBossState(data));
-		}
+        {
+            std::istringstream loadStream(data);
+            char dataHead1, dataHead2;
+            loadStream >> dataHead1 >> dataHead2;
+            std::string newdata = loadStream.str();
 
-		/*void Update(uint32 diff)
-		{
+            uint32 buff;
+            if(dataHead1 == 'F' && dataHead2 == 'L')
+            {
+                for(int i = 0; i < MAX_ENCOUNTER; ++i)
+                {
+                    loadStream >> buff;
+                    Encounter[i]= buff;
+                }
+            }
 
-		}*/
-	};
+            for(int i = 0; i < MAX_ENCOUNTER; ++i)
+                if(Encounter[i] != DONE)
+                    Encounter[i] = NOT_STARTED;
+        }
+};
 
 	InstanceScript* GetInstanceScript(InstanceMap* map) const
 	{

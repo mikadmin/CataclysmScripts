@@ -46,6 +46,8 @@
 #include "ScriptPCH.h"
 #include "firelands.h"
 
+#define MAX_DISTANCE_BETWEEN_SHANNO_AND_DOGS 40
+
 enum Yells
 {
 	SAY_AGGRO                                    = -1999971,
@@ -156,6 +158,8 @@ public:
 			me->GetMotionMaster()->MoveTargetedHome();
 
 			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+
+			_Reset();
 		}
 
 		/*void JustSummoned(Creature* summon)
@@ -200,7 +204,7 @@ public:
 			if (!me->getVictim()) {}
 
 			events.Update(diff);
-			while (uint32 eventId = events.ExecuteEvent())
+			while (uint32 eventId = events.GetEvent())
 			{
 				switch (eventId)
 				{
@@ -288,14 +292,13 @@ public:
 		npc_ragefaceAI(Creature *c) : ScriptedAI(c)
 		{
 			instance = me->GetInstanceScript();
-			shallTarget = NULL;
 
 			Reset();
 		}
 
 		InstanceScript* instance;
 		EventMap events;
-		Unit* shallTarget;
+		Unit *shallTarget;
 		bool frenzy;
 		bool stackerStopper;
 		bool doggedDeterminaton;
@@ -303,9 +306,12 @@ public:
 		void Reset()
 		{
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+
+			events.Reset();
 			frenzy = false;
 			stackerStopper = false;
-
+			shallTarget = NULL;
+			doggedDeterminaton = false;
 			me->GetMotionMaster()->MoveTargetedHome();
 		}
 
@@ -319,10 +325,7 @@ public:
 
 		void EnterCombat(Unit * /*who*/)
 		{
-			events.Reset();
 			events.ScheduleEvent(EVENT_FACE_RAGE, 15000); //TODO Find out the correct Time
-
-			doggedDeterminaton = false;
 		}
 
 		void SelectNewTarget()
@@ -353,18 +356,18 @@ public:
 
 			events.Update(diff);
 
-			while (uint32 eventId = events.ExecuteEvent())
+			while (uint32 eventId = events.GetEvent())
 			{
 				switch (eventId)
 				{
 				case EVENT_FACE_RAGE:
 					DoCastVictim(SPELL_FACE_RAGE);
 					//me->getVictim()->SetFlag(UNIT_FIELD_FLAGS,  UNIT_STAT_STUNNED);
-					me->getVictim()->AddUnitState(UNIT_STAT_STUNNED);
+					//me->getVictim()->AddUnitState(UNIT_STAT_STUNNED);
 					break;
 				}
 			}
-
+			
 			if(GetShannox() != NULL)
 			{
 				if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
@@ -373,7 +376,7 @@ public:
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 				}
 
-				if(GetShannox()->GetDistance2d(me)>=40) //TODO Sniff right Distance
+				if(GetShannox()->GetDistance2d(me) >= MAX_DISTANCE_BETWEEN_SHANNO_AND_DOGS) //TODO Sniff right Distance
 				{
 					//DoCast(me, SPELL_DOGGED_DETERMINATION);
 					doggedDeterminaton = true;
@@ -381,9 +384,10 @@ public:
 						GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
 				}
 
-				if (doggedDeterminaton && GetShannox()->GetDistance2d(me) < 35)
+				if (doggedDeterminaton && GetShannox()->GetDistance2d(me) <= 35)
 				{
 					me->GetMotionMaster()->Clear();
+                    me->GetMotionMaster()->MoveIdle();
 					doggedDeterminaton = false;
 					//me->RemoveAurasDueToSpell(SPELL_DOGGED_DETERMINATION);
 					
@@ -442,6 +446,7 @@ public:
 
 		void Reset()
 		{
+			events.Reset();
 			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 			me->GetMotionMaster()->MoveTargetedHome();
 			frenzy = false;
@@ -457,7 +462,6 @@ public:
 
 		void EnterCombat(Unit * who)
 		{	
-			events.Reset();
 			events.ScheduleEvent(EVENT_LIMB_RIP, 5000); //TODO Find out the correct Time
 		}
 
@@ -467,7 +471,7 @@ public:
 
 			events.Update(diff);
 
-			while (uint32 eventId = events.ExecuteEvent())
+			while (uint32 eventId = events.GetEvent())
 			{
 				switch (eventId)
 				{
@@ -487,7 +491,7 @@ public:
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 				}
 				
-				if(GetShannox()->GetDistance2d(me)>=5) //TODO Sniff right Distance
+				if(GetShannox()->GetDistance2d(me)>=35) //TODO Sniff right Distance
 				{
 					DoCast(me, SPELL_DOGGED_DETERMINATION);
 					me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
