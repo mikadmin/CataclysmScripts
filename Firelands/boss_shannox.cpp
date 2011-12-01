@@ -31,8 +31,8 @@
 /* TODO:
 - [50% DONE] Insert Heroic Spells
 - Insert the Sound data
-- The Script Crashes sometimes (I'm not sure weather this
-  is the fault of this Script or the Core)
+- [FIXXED] The Script Crashes sometimes (I'm not sure weather this
+is the fault of this Script or the Core)
 - Add Handling for Hurling the Spear
 - Add Trigger for the 'Seperation Anxietly' Spell
 - Add Trigger for the Fire Nova when the Spear is reaching the Ground
@@ -45,8 +45,6 @@
 
 #include "ScriptPCH.h"
 #include "firelands.h"
-
-#define MAX_DISTANCE_BETWEEN_SHANNO_AND_DOGS 40
 
 enum Yells
 {
@@ -131,42 +129,55 @@ public:
 			instance = me->GetInstanceScript();
 			// TODO Add not Tauntable Flag
 
+			pRiplimb = NULL;
+			pRageface = NULL;
+
 			Reset();
 		}
 
 		InstanceScript* instance;
-		bool enrage;
+		Creature* pRiplimb;
+		Creature* pRageface;
+		bool softEnrage;
+		bool bucketListCheckPoints[5];
 
 		void Reset()
 		{
+			me->RemoveAllAuras();
+			me->GetMotionMaster()->MoveTargetedHome();
 			instance->SetBossState(BOSS_SHANNOX, NOT_STARTED);
-			enrage = false;
+			softEnrage = false;
 			events.Reset();
 
-			if(GetRiplimb() != NULL)  // Prevents Crashes
+			if(pRiplimb != NULL)  // Prevents Crashes
 			{
-				if (GetRiplimb()->isDead())
-					GetRiplimb() -> Respawn();
-			}
-
-			if(GetRageface() != NULL)  // Prevents Crashes
+				if (pRiplimb->isDead())
+					pRiplimb -> Respawn();
+			}else
 			{
-				if (GetRageface()->isDead())
-					GetRageface() -> Respawn();
-			}
+				pRiplimb = me->SummonCreature(NPC_RIPLIMB, me->GetPositionX()-urand(6,8)
+					,me->GetPositionY()-urand(6,8),me->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
+			};
 
-			me->GetMotionMaster()->MoveTargetedHome();
+			if(pRageface != NULL)  // Prevents Crashes
+			{
+				if (pRageface->isDead())
+					pRageface -> Respawn();
+			}else
+			{
+				pRageface = me->SummonCreature(NPC_RAGEFACE, me->GetPositionX()+urand(6,8)
+					,me->GetPositionY()+urand(6,8),me->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
+			};
 
 			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 
 			_Reset();
 		}
 
-		/*void JustSummoned(Creature* summon)
+		void JustSummoned(Creature* summon)
 		{
-		summons.Summon(summon);
-		summon->setActive(true);
-		}*/
+			summons.Summon(summon);
+		}
 
 		void KilledUnit(Unit * /*victim*/)
 		{
@@ -174,9 +185,11 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
-
 			instance->SetBossState(BOSS_SHANNOX, DONE);
 			DoScriptText(SAY_ON_DEAD, me);
+
+			summons.DespawnAll(); // Despawns all Dogs Spears etc.
+
 			_JustDied();
 		}
 
@@ -193,8 +206,6 @@ public:
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
 			DoScriptText(SAY_AGGRO, me, who);
-
-
 
 			_EnterCombat();
 		}
@@ -218,7 +229,7 @@ public:
 					events.ScheduleEvent(EVENT_ARCING_SLASH, 10000);  //TODO Find out the correct Time
 					break;
 				case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
-					if(GetRiplimb()->isDead())
+					if(pRiplimb->isDead())
 					{ // Magma Rupture when Ripclimb is Death
 						DoCast(SPELL_MAGMA_RUPTURE_SHANNOX);
 
@@ -246,29 +257,16 @@ public:
 
 			if (!UpdateVictim())
 				return;
-			if (GetRageface() != NULL && GetRiplimb() != NULL) // Prevents Crashes
+
+			if ((pRiplimb->isDead() || pRageface -> isDead()) && !softEnrage)
 			{
-				if ((GetRiplimb()->isDead() || GetRageface()->isDead()) && !enrage)
-				{
-					DoCast(me, SPELL_FRENZY_SHANNOX);
-					DoScriptText(SAY_ON_DOGS_FALL, me);
-					me->MonsterTextEmote(SAY_SOFT_ENRAGE, 0, true);
-					enrage = true;
-				}
+				DoCast(me, SPELL_FRENZY_SHANNOX);
+				DoScriptText(SAY_ON_DOGS_FALL, me);
+				me->MonsterTextEmote(SAY_SOFT_ENRAGE, 0, true);
+				softEnrage = true;
 			}
 
 			DoMeleeAttackIfReady();
-		}
-
-
-		Creature* GetRiplimb()
-		{
-			return me->GetCreature(*me,instance->GetData64(NPC_RIPLIMB));
-		}
-
-		Creature* GetRageface()
-		{
-			return me->GetCreature(*me,instance->GetData64(NPC_RAGEFACE));
 		}
 	};
 };
@@ -302,17 +300,20 @@ public:
 		bool frenzy;
 		bool stackerStopper;
 		bool doggedDeterminaton;
-
+		
 		void Reset()
 		{
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 
+			me->RemoveAllAuras();
 			events.Reset();
 			frenzy = false;
 			stackerStopper = false;
 			shallTarget = NULL;
 			doggedDeterminaton = false;
+						
 			me->GetMotionMaster()->MoveTargetedHome();
+			//me->GetMotionMaster()->MoveFollow(pShannox, 5, 5);
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -325,15 +326,17 @@ public:
 
 		void EnterCombat(Unit * /*who*/)
 		{
+			//me->GetMotionMaster()->MoveIdle();
 			events.ScheduleEvent(EVENT_FACE_RAGE, 15000); //TODO Find out the correct Time
 		}
 
 		void SelectNewTarget()
 		{
 			shallTarget = SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true);
+			me->getThreatManager().resetAllAggro();
 			me->AddThreat(shallTarget, 500.0f);
-            me->Attack(shallTarget, true);
-            me->GetMotionMaster()->MoveChase(shallTarget);
+			me->Attack(shallTarget, true);
+			me->GetMotionMaster()->MoveChase(shallTarget);
 		}
 
 		void DamageTaken(Unit* attacker, uint32 damage)
@@ -367,7 +370,7 @@ public:
 					break;
 				}
 			}
-			
+
 			if(GetShannox() != NULL)
 			{
 				if(GetShannox()->GetHealthPct() <= 30 && frenzy == false)
@@ -376,7 +379,7 @@ public:
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 				}
 
-				if(GetShannox()->GetDistance2d(me) >= MAX_DISTANCE_BETWEEN_SHANNO_AND_DOGS) //TODO Sniff right Distance
+				if(GetShannox()->GetDistance2d(me) >= 40) //TODO Sniff right Distance
 				{
 					//DoCast(me, SPELL_DOGGED_DETERMINATION);
 					doggedDeterminaton = true;
@@ -386,14 +389,12 @@ public:
 
 				if (doggedDeterminaton && GetShannox()->GetDistance2d(me) <= 35)
 				{
-					me->GetMotionMaster()->Clear();
-                    me->GetMotionMaster()->MoveIdle();
 					doggedDeterminaton = false;
+					me->GetMotionMaster()->MoveIdle();
 					//me->RemoveAurasDueToSpell(SPELL_DOGGED_DETERMINATION);
-					
-					
 				}
 			}
+
 
 			if (!UpdateVictim())
 				return;
@@ -407,7 +408,6 @@ public:
 			if(me->GetMap()->IsHeroic())
 				DoCast(me, SPELL_FEEDING_FRENZY_H);
 		}
-
 
 		Creature* GetShannox()
 		{
@@ -436,20 +436,25 @@ public:
 		npc_riplimbAI(Creature *c) : ScriptedAI(c)
 		{
 			instance = me->GetInstanceScript();
-
+			
 			Reset();
 		}
 
 		InstanceScript* instance;
 		EventMap events;
 		bool frenzy;
+		bool doggedDeterminaton;
 
 		void Reset()
 		{
+			me->RemoveAllAuras();
 			events.Reset();
 			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 			me->GetMotionMaster()->MoveTargetedHome();
 			frenzy = false;
+			doggedDeterminaton = false;
+
+			//me->GetMotionMaster()->MoveFollow(pShannox, 10, 7);
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -490,13 +495,25 @@ public:
 					frenzy = true;
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 				}
-				
-				if(GetShannox()->GetDistance2d(me)>=35) //TODO Sniff right Distance
+
+				if(GetShannox()->GetDistance2d(me) >= 40) //TODO Sniff right Distance
 				{
-					DoCast(me, SPELL_DOGGED_DETERMINATION);
-					me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
+					//DoCast(me, SPELL_DOGGED_DETERMINATION);
+					doggedDeterminaton = true;
+					me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),
+						GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
+				}
+
+				if (doggedDeterminaton && GetShannox()->GetDistance2d(me) <= 35)
+				{
+					me->GetMotionMaster()->MoveIdle();
+					doggedDeterminaton = false;
+					//me->RemoveAurasDueToSpell(SPELL_DOGGED_DETERMINATION);
+
+
 				}
 			}
+
 
 			if (!UpdateVictim())
 				return;
@@ -515,8 +532,6 @@ public:
 		{
 			return me->GetCreature(*me,instance->GetData64(NPC_SHANNOX));
 		}
-
-
 	};
 };
 
@@ -547,6 +562,10 @@ public:
 		InstanceScript* instance;
 
 		void Reset()
+		{
+		}
+
+		void PassengerBoarded(Unit* /*passenger*/, int8 /*seatId*/, bool /*apply*/)
 		{
 		}
 
@@ -587,36 +606,36 @@ public:
 //Heroic Shannox (5806)
 class achievement_heroic_shannox : public AchievementCriteriaScript
 {
-   public:
-       achievement_heroic_shannox() : AchievementCriteriaScript("achievement_heroic_shannox")
-       {
-       }
+public:
+	achievement_heroic_shannox() : AchievementCriteriaScript("achievement_heroic_shannox")
+	{
+	}
 
-       bool OnCheck(Player* player, Unit* target)
-       {
-           if (!target)
-               return false;
+	bool OnCheck(Player* player, Unit* target)
+	{
+		if (!target)
+			return false;
 
-		   return player->GetMap()->IsHeroic() && player->
-			   GetInstanceScript()->GetBossState(BOSS_SHANNOX == DONE);
-       }
+		return player->GetMap()->IsHeroic() && player->
+			GetInstanceScript()->GetBossState(BOSS_SHANNOX == DONE);
+	}
 };
 
 //Bucket List (5829) //TODO Currently not Working!
 class achievement_bucket_list : public AchievementCriteriaScript
 {
-   public:
-       achievement_bucket_list() : AchievementCriteriaScript("achievement_bucket_list")
-       {
-       }
+public:
+	achievement_bucket_list() : AchievementCriteriaScript("achievement_bucket_list")
+	{
+	}
 
-       bool OnCheck(Player* /*player*/, Unit* target)
-       {
-           if (!target)
-               return false;
+	bool OnCheck(Player* /*player*/, Unit* target)
+	{
+		if (!target)
+			return false;
 
-           return false;
-       }
+		return false;
+	}
 };
 
 void AddSC_boss_shannox()
