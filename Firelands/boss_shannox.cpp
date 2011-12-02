@@ -29,6 +29,7 @@
 ###########################*/
 
 /* TODO:
+- [100% DONE] Arcing Slash (Works Perfect)
 - [50% DONE] Insert Heroic Spells
 - Insert the Sound data
 - [FIXXED] The Script Crashes sometimes (I'm not sure weather this
@@ -107,6 +108,13 @@ enum Events
 
 };
 
+enum Phases
+{	
+	PHASE_NON,
+	PHASE_HAS_SPEER,
+	PHASE_BRING_SPEER_BACK,
+};
+
 
 /*#########################
 ######### Shannox #########
@@ -140,14 +148,16 @@ public:
 		Creature* pRageface;
 		bool softEnrage;
 		bool bucketListCheckPoints[5];
+		Phases phase;
 
 		void Reset()
 		{
 			me->RemoveAllAuras();
 			me->GetMotionMaster()->MoveTargetedHome();
-			instance->SetBossState(BOSS_SHANNOX, NOT_STARTED);
+			instance->SetBossState(DATA_SHANNOX, NOT_STARTED);
 			softEnrage = false;
 			events.Reset();
+			phase = PHASE_HAS_SPEER;
 
 			if(pRiplimb != NULL)  // Prevents Crashes
 			{
@@ -169,7 +179,7 @@ public:
 					,me->GetPositionY()+urand(6,8),me->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
 			};
 
-			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 
 			_Reset();
 		}
@@ -185,7 +195,7 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
-			instance->SetBossState(BOSS_SHANNOX, DONE);
+			instance->SetBossState(DATA_SHANNOX, DONE);
 			DoScriptText(SAY_ON_DEAD, me);
 
 			summons.DespawnAll(); // Despawns all Dogs Spears etc.
@@ -195,12 +205,12 @@ public:
 
 		void EnterCombat(Unit* who)
 		{
-			instance->SetBossState(BOSS_SHANNOX,IN_PROGRESS);
+			instance->SetBossState(DATA_SHANNOX,IN_PROGRESS);
 
 			DoZoneInCombat();
 
 			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 20000); //TODO Find out the correct Time
-			events.ScheduleEvent(EVENT_ARCING_SLASH, 10000);  //TODO Find out the correct Time
+			events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);  //TODO Find out the correct Time
 			events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 20000); //TODO Find out the correct Time
 
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
@@ -215,7 +225,7 @@ public:
 			if (!me->getVictim()) {}
 
 			events.Update(diff);
-			while (uint32 eventId = events.GetEvent())
+			while (uint32 eventId = events.ExecuteEvent())
 			{
 				switch (eventId)
 				{
@@ -226,27 +236,29 @@ public:
 					break;
 				case EVENT_ARCING_SLASH:
 					DoCast(SPELL_ARCTIC_SLASH);
-					events.ScheduleEvent(EVENT_ARCING_SLASH, 10000);  //TODO Find out the correct Time
+					events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);
 					break;
 				case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
-					if(pRiplimb->isDead())
+					if (phase = PHASE_HAS_SPEER)
+					{
+						/*if(pRiplimb->isDead())
 					{ // Magma Rupture when Ripclimb is Death
 						DoCast(SPELL_MAGMA_RUPTURE_SHANNOX);
 
-					}else
-					{ // Hurl Spear when Riplimb is Alive
-
-						DoCast(SPELL_HURL_SPEAR);
-						events.ScheduleEvent(EVENT_SUMMON_SPEAR, 1500);
-
-					}
-					events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 20000); //Corrects Time is 43s
-					break;
-				case EVENT_SUMMON_SPEAR:
+						}else
+					{ // Hurl Spear when Riplimb is Alive*/
 					DoCast(SPELL_HURL_SPEAR_SUMMON);
 					DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
 					DoZoneInCombat();
+						//DoCast(SPELL_HURL_SPEAR);
+					//}
+					events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 30000); //Corrects Time is 43s
+					}else
+					{ // Shifts the Event 10s back
+						events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
+					}
 					break;
+
 				case EVENT_BERSERK:
 					DoCast(me, SPELL_BERSERK);
 					break;
@@ -296,14 +308,14 @@ public:
 
 		InstanceScript* instance;
 		EventMap events;
-		Unit *shallTarget;
+		Unit* shallTarget;
 		bool frenzy;
 		bool stackerStopper;
 		bool doggedDeterminaton;
 		
 		void Reset()
 		{
-			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 
 			me->RemoveAllAuras();
 			events.Reset();
@@ -411,7 +423,7 @@ public:
 
 		Creature* GetShannox()
 		{
-			return me->GetCreature(*me,instance->GetData64(NPC_SHANNOX));
+			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_SHANNOX));
 		}
 
 	};
@@ -467,7 +479,7 @@ public:
 
 		void EnterCombat(Unit * who)
 		{	
-			events.ScheduleEvent(EVENT_LIMB_RIP, 5000); //TODO Find out the correct Time
+			events.ScheduleEvent(EVENT_LIMB_RIP, 10000); //TODO Find out the correct Time
 		}
 
 		void UpdateAI(const uint32 diff)
@@ -476,14 +488,13 @@ public:
 
 			events.Update(diff);
 
-			while (uint32 eventId = events.GetEvent())
+			while (uint32 eventId = events.ExecuteEvent())
 			{
 				switch (eventId)
 				{
 				case EVENT_LIMB_RIP:
-					DoScriptText(SAY_AGGRO, me);
 					DoCastVictim(SPELL_LIMB_RIP);	
-					events.ScheduleEvent(EVENT_LIMB_RIP, 5000); //TODO Find out the correct Time
+					events.ScheduleEvent(EVENT_LIMB_RIP, 10000); //TODO Find out the correct Time
 					break;
 				}
 			}
@@ -530,7 +541,7 @@ public:
 
 		Creature* GetShannox()
 		{
-			return me->GetCreature(*me,instance->GetData64(NPC_SHANNOX));
+			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_SHANNOX));
 		}
 	};
 };
@@ -579,8 +590,10 @@ public:
 
 		void EnterCombat(Unit * /*who*/)
 		{
-			me->MonsterSay("Spear Triggered (Now in Combat!)",0,0);
-			DoCast(SPELL_MAGMA_RUPTURE);
+			/*if (GetRiplimb() != NULL)
+				me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
+				,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),2,1);
+*/
 			DoCast(SPELL_MAGMA_FLARE);
 		}
 
@@ -594,7 +607,12 @@ public:
 
 		Creature* GetShannox()
 		{
-			return me->GetCreature(*me,instance->GetData64(NPC_SHANNOX));
+			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_SHANNOX));
+		}
+
+		Creature* GetRiplimb()
+		{
+			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_RIPLIMB));
 		}
 	};
 };
@@ -617,7 +635,7 @@ public:
 			return false;
 
 		return player->GetMap()->IsHeroic() && player->
-			GetInstanceScript()->GetBossState(BOSS_SHANNOX == DONE);
+			GetInstanceScript()->GetBossState(DATA_SHANNOX == DONE);
 	}
 };
 
@@ -645,5 +663,5 @@ void AddSC_boss_shannox()
 	new npc_riplimb();
 	new achievement_bucket_list();
 	new achievement_heroic_shannox();
-	//new npc_shannox_spear();
+	new npc_shannox_spear();
 }

@@ -54,6 +54,8 @@ public:
 		uint64 uiRiplimb;
 		uint64 uiRageface;
 
+		uint32 TeamInInstance;
+
 		// GameObjects
 
 		// Miscellaneous
@@ -77,6 +79,12 @@ public:
 				Encounter[i] = NOT_STARTED;
 		}
 
+		            void OnPlayerEnter(Player* player)
+            {
+                if (!TeamInInstance)
+                    TeamInInstance = player->GetTeam();
+            }
+
 		bool IsEncounterInProgress() const
 		{
 			for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
@@ -90,6 +98,14 @@ public:
 
 		void OnCreatureCreate(Creature* creature)
 		{
+			                if (!TeamInInstance)
+                {
+                    Map::PlayerList const &players = instance->GetPlayers();
+                    if (!players.isEmpty())
+                        if (Player* player = players.begin()->getSource())
+                            TeamInInstance = player->GetTeam();
+             }
+
 			switch (creature->GetEntry())
 			{
 				// Bosses
@@ -116,12 +132,12 @@ public:
 				break;
 
 				// Npcs
-			case NPC_RAGEFACE:
+			/*case NPC_RAGEFACE:
 				uiRageface = creature->GetGUID();
 				break;
 			case NPC_RIPLIMB:
 				uiRiplimb = creature->GetGUID();
-				break;
+				break;*/
 
 			}
 
@@ -167,10 +183,6 @@ public:
 			case BOSS_ALYSRAZAR:
 				break;
 			case BOSS_SHANNOX:
-				if (type=IN_PROGRESS)
-				{
-
-				}
 				break;
 			case BOSS_BALOROC:
 				break;
@@ -200,30 +212,30 @@ public:
 
 		uint64 GetData64(uint32 data)
 		{
-			/*switch (data)
+			switch (data)
 			{
 				// Bosses
 			case NPC_BETHTILAC:
-				return BethilacGUID;
+				return uiBethilac;
 			case NPC_RHYOLITH:
-				return RhyolithGUID;
+				return uiRhyolith;
 			case NPC_ALYSRAZAR:
-				return AlysrazarGUID;
+				return uiAlysrazar;
 			case NPC_SHANNOX:
-				return ShannoxGUID;
+				return uiShannox;
 			case NPC_BALOROC:
-				return BalorocGUID;
+				return uiBaloroc;
 			case NPC_MAJORDOMUS:
-				return MajordomusGUID;
+				return uiMajordomus;
 			case NPC_RAGNAROS_CATA:
-				return RagnarosGUID;
+				return uiRagnaros;
 
 				// Npcs
 			case NPC_RAGEFACE:
-				return RagefaceGUID;
+				return uiRageface;
 			case NPC_RIPLIMB:
-				return RiplimbGUID;
-			}*/
+				return uiRiplimb;
+			}
 
 			return NULL;
 		}

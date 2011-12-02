@@ -27,31 +27,6 @@
 #include "ObjectMgr.h"
 #define FirelandsScriptName "instance_firelands"
 
-enum Data
-{
-DATA_INTRO_EVENT, //ragnaros intro
-DATA_BETHTILAC_EVENT,
-DATA_RHYOLITH_EVENT,
-DATA_ALYSRAZAR_EVENT,
-DATA_SHANNOX_EVENT,
-DATA_BALOROC_EVENT,
-DATA_MAJORDOMUS_EVENT,
-DATA_RAGNAROS_CATA_EVENT,
-
-};
-
-enum Data64
-{
-DATA_INTRO, //ragnaros intro
-DATA_BETHTILAC,
-DATA_RHYOLITH,
-DATA_ALYSRAZAR,
-DATA_SHANNOX,
-DATA_BALOROC,
-DATA_MAJORDOMUS,
-DATA_RAGNAROS_CATA,
-};
-
 enum creaturesIDs
 {
 //bosses
@@ -74,15 +49,16 @@ NPC_SHANNOX_SPEAR = 53752, // Shannox Spear
 
 };
 
-enum Encounter
+enum Data
 {
-	BOSS_BALOROC             = 0,
-    BOSS_SHANNOX             = 1,
-    BOSS_ALYSRAZAR           = 2,
-    BOSS_BETHTILAC           = 3,
-    BOSS_RHYOLITH            = 4,
-    BOSS_MAJORDOMUS          = 5,
-    BOSS_RAGNAROS            = 6,
+	// Encounter States
+	DATA_BALOROC             = 0,
+    DATA_SHANNOX             = 1,
+    DATA_ALYSRAZAR           = 2,
+    DATA_BETHTILAC           = 3,
+    DATA_RHYOLITH            = 4,
+    DATA_MAJORDOMUS          = 5,
+    DATA_RAGNAROS            = 6,
 };
 
 enum MovePoints
@@ -101,7 +77,7 @@ ACTION_RAGNAROS_STANDUP, //only on heroic mode
 ACTION_SULFURAS_SMASH //target for smashes
 };
 
-enum GameObjectIds
+enum GameObjectsIds
 {
      rhyolith_vulkan = 0
 };
