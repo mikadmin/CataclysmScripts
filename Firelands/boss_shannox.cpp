@@ -23,25 +23,24 @@
 #      Developer Info:      #
 #   Script Coded by Naios   #
 #                           #
-#   Script Complete: 40%    #
+#   Script Complete: 60%    #
 #  Works with Trillium EMU  #
 #     & Strawberry Core     #
 ###########################*/
 
 /* TODO:
 - [100% DONE] Arcing Slash (Works Perfect)
-- [75% DONE] Insert Heroic Spells
+- [75%] Insert Heroic Spells
 - Insert the Sound data
-- [FIXXED] The Script Crashes sometimes (I'm not sure weather this
-is the fault of this Script or the Core)
-- Add Handling for Hurling the Spear
-- [100%] Add Trigger for the 'Seperation Anxietly' Spell
+- [100% DONE] The Script Crashes sometimes (I'm not sure weather this
+  is the fault of this Script or the Core)
+- [100% DONE] Add Trigger for the 'Seperation Anxietly' Spell
 - [25%] Add Trigger for the Fire Nova when the Spear is reaching the Ground
 - Add Action that Shannox throws the Spear to Riplimb
 - Add Action that Riplimb is taking the Spear back to Shannox
 - The 'Feeding Frenzy Buff' Stacks too fast
 - Add Kristall Trap Actions
-- Add Fire Trap Actions
+- [75%] Add Fire Trap Actions (Damage of the Trap is missing)
 */
 
 #include "ScriptPCH.h"
@@ -91,6 +90,10 @@ enum Spells
 	//Spear Abilities
 	SPELL_MAGMA_FLARE = 100495, // Inflicts Fire damage to enemies within 50 yards.
 	SPELL_MAGMA_RUPTURE = 100003, // Calls forth magma eruptions to damage nearby foes. (Dummy Effect)
+	SPELL_MAGMA_RUPTURE_VISUAL = 99841,
+
+	//Traps Abilities
+	CRYSTAL_PRISON_EFFECT = 99837,
 
 	// Dont know weather i implement that...
 	SPELL_DOGGED_DETERMINATION = 101111, //Filled with a sense of purpose, the hound resists attempts to hinder its path back to its master.
@@ -101,17 +104,19 @@ enum Spells
 enum Events
 {
 	//Shannox
-	EVENT_IMMOLTATION_TRAP = 1,
-	EVENT_BERSERK = 2,
-	EVENT_ARCING_SLASH = 3,
-	EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE = 4,
-	EVENT_SUMMON_SPEAR = 5,
+	EVENT_IMMOLTATION_TRAP = 1, // Every 10s
+	EVENT_BERSERK = 2, // After 10m
+	EVENT_ARCING_SLASH = 3, // Every 12s
+	EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE = 4, // Every 42s
+	EVENT_SUMMON_SPEAR = 5, // After EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE
+	EVENT_SUMMON_CRYSTAL_PRISON = 6, // Every 25s
 
 	//Riplimb
-	EVENT_LIMB_RIP = 6,
+	EVENT_LIMB_RIP = 7, // i Dont know...
+	EVENT_RIPLIMB_RESPAWN_H = 8,
 
 	//Rageface
-	EVENT_FACE_RAGE = 7,
+	EVENT_FACE_RAGE = 9
 
 };
 
@@ -154,7 +159,6 @@ public:
 		InstanceScript* instance;
 		Creature* pRiplimb;
 		Creature* pRageface;
-		Unit* tempUnit;
 		bool softEnrage;
 		bool bucketListCheckPoints[5];
 		Phases phase;
@@ -164,7 +168,6 @@ public:
 			me->RemoveAllAuras();
 			me->GetMotionMaster()->MoveTargetedHome();
 			softEnrage = false;
-			tempUnit = NULL;
 			events.Reset();
 			phase = PHASE_HAS_SPEER;
 
@@ -174,8 +177,8 @@ public:
 					pRiplimb -> Respawn();
 			}else
 			{
-				pRiplimb = me->SummonCreature(NPC_RIPLIMB, me->GetPositionX()-urand(6,8)
-					,me->GetPositionY()-urand(6,8),me->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
+				pRiplimb = me->SummonCreature(NPC_RIPLIMB, me->GetPositionX()-5
+					,me->GetPositionY()-5,me->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
 			};
 
 			if(pRageface != NULL)  // Prevents Crashes
@@ -184,11 +187,13 @@ public:
 					pRageface -> Respawn();
 			}else
 			{
-				pRageface = me->SummonCreature(NPC_RAGEFACE, me->GetPositionX()+urand(6,8)
-					,me->GetPositionY()+urand(6,8),me->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
+				pRageface = me->SummonCreature(NPC_RAGEFACE, me->GetPositionX()+5
+					,me->GetPositionY()+5,me->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
 			};
 
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+
+			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);  //TODO Only for testing
 
 			_Reset();
 		}
@@ -196,6 +201,10 @@ public:
 		void JustSummoned(Creature* summon)
 		{
 			summons.Summon(summon);
+			summon->setActive(true);
+			
+			if(me->isInCombat())
+			summon->AI()->DoZoneInCombat();
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -206,7 +215,7 @@ public:
 		{
 			DoScriptText(SAY_ON_DEAD, me);
 
-			summons.DespawnAll(); // Despawns all Dogs Spears etc.
+			summons.DespawnAll();
 
 			_JustDied();
 		}
@@ -215,8 +224,8 @@ public:
 		{
 			DoZoneInCombat();
 
-			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000); //TODO Find out the correct Time
-			events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);  //TODO Find out the correct Time
+			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000);
+			events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);
 			events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 20000); //TODO Find out the correct Time
 
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
@@ -233,55 +242,47 @@ public:
 			events.Update(diff);
 
 			if (me->HasUnitState(UNIT_STAT_CASTING))
-                return;
-			
+				return;
+
 			while (uint32 eventId = events.ExecuteEvent())
 			{
 				switch (eventId)
 				{
 				case EVENT_IMMOLTATION_TRAP:
-					{
-					me->MonsterSay("[DEBUG] Lege Feuerfalle",0,0);
-					/*tempUnit = SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true);
-					DoCast(SelectTarget(SELECT_TARGET_RANDOM, 1, 60, true), SPELL_IMMOLATION_TRAP);*/
-					DoCast(SPELL_IMMOLATION_TRAP);
-					events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000); //TODO Find out the correct Time
+					DoCast(SelectTarget(SELECT_TARGET_RANDOM, 1, 60, true),SPELL_IMMOLATION_TRAP,true);
+					events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000);
 					break;
-					}
-				case EVENT_ARCING_SLASH:
-					{
-					DoCast(RAID_MODE(SPELL_ARCTIC_SLASH_10N, SPELL_ARCTIC_SLASH_25N,
-						SPELL_ARCTIC_SLASH_10H, SPELL_ARCTIC_SLASH_25H));
-					events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);
-					break;
-					}
-				case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
-					{
-					if (phase = PHASE_HAS_SPEER)
-					{
-						if(pRiplimb->isDead())
-						{ // Magma Rupture when Ripclimb is Death
-							DoCast(SPELL_MAGMA_RUPTURE_SHANNOX);
-
-						}/*else
-						 { // Hurl Spear when Riplimb is Alive
-						 DoCast(SPELL_HURL_SPEAR_SUMMON);
-						 DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
-						 DoZoneInCombat();
-						 //DoCast(SPELL_HURL_SPEAR);
-						 }*/
-						events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 30000); //Corrects Time is 43s
-					}else
-					{ // Shifts the Event 10s back
-						events.RescheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
-					}
-					break;
-					}
 
 				case EVENT_BERSERK:
 					DoCast(me, SPELL_BERSERK);
 					break;
-	
+
+				case EVENT_ARCING_SLASH:
+					DoCast(RAID_MODE(SPELL_ARCTIC_SLASH_10N, SPELL_ARCTIC_SLASH_25N,
+						SPELL_ARCTIC_SLASH_10H, SPELL_ARCTIC_SLASH_25H));
+					events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);
+					break;
+
+				case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
+
+					if(pRiplimb->isDead())
+					{ // Cast Magma Rupture when Ripclimb is Death
+						DoCast(SPELL_MAGMA_RUPTURE_SHANNOX);
+					}else
+					{
+						 // Throw Spear if Riplimb is Alive and Shannox has the Spear
+						if (phase == PHASE_HAS_SPEER)
+						{
+						DoCast(SPELL_HURL_SPEAR_SUMMON);
+						DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
+						phase = PHASE_NON;
+						}else
+						// Shifts the Event back if Shannox has not the Spear yet
+						events.RescheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
+					}
+
+					break;
+
 				default:
 					break;
 				}
@@ -293,13 +294,13 @@ public:
 			if ((pRiplimb->isDead() || pRageface -> isDead()) && !softEnrage)
 			{
 				DoCast(me, SPELL_FRENZY_SHANNOX);
-				Talk(SAY_ON_DOGS_FALL);
-				me->MonsterTextEmote(SAY_SOFT_ENRAGE, 0, true);
+				DoScriptText(SAY_ON_DOGS_FALL, me);
+				DoScriptText(SAY_SOFT_ENRAGE, me);
 				softEnrage = true;
 			}
 
-			if((pRiplimb->GetDistance2d(me) >= 40 || pRageface->GetDistance2d(me) >= 40)
-				&& !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
+			if((pRiplimb->GetDistance2d(me) >= 70 || pRageface->GetDistance2d(me) >= 70)
+				&& !me->HasAura(SPELL_SEPERATION_ANXIETY))
 			{
 				DoCast(me, SPELL_SEPERATION_ANXIETY);
 			}
@@ -417,7 +418,7 @@ public:
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 				}
 
-				if(GetShannox()->GetDistance2d(me) >= 40 && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
+				if(GetShannox()->GetDistance2d(me) >= 70 && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
 				{
 					DoCast(me, SPELL_SEPERATION_ANXIETY);
 				}
@@ -430,10 +431,10 @@ public:
 			DoMeleeAttackIfReady();
 		}
 
-		void DamageDealt(Unit* /*victim*/, uint32& /*damage*/, DamageEffectType /*damageType*/)
+		void DamageDealt(Unit* victim, uint32& damage, DamageEffectType /*damageType*/)
 		{
 			// Feeding Frenzy (Heroic Ability)
-			if(me->GetMap()->IsHeroic())
+			if(me->GetMap()->IsHeroic() && damage > 0)
 				DoCast(me, SPELL_FEEDING_FRENZY_H);
 		}
 
@@ -476,11 +477,12 @@ public:
 		{
 			me->RemoveAllAuras();
 			events.Reset();
-			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 			me->GetMotionMaster()->MoveTargetedHome();
 			frenzy = false;
 
 			//me->GetMotionMaster()->MoveFollow(pShannox, 10, 7);
+
+			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -489,11 +491,13 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
+			if(me->GetMap()->IsHeroic())
+			events.ScheduleEvent(EVENT_RIPLIMB_RESPAWN_H, 30000);
 		}
 
 		void EnterCombat(Unit * who)
 		{	
-			events.ScheduleEvent(EVENT_LIMB_RIP, 10000); //TODO Find out the correct Time
+			events.ScheduleEvent(EVENT_LIMB_RIP, 12000); //TODO Find out the correct Time
 		}
 
 		void UpdateAI(const uint32 diff)
@@ -508,7 +512,14 @@ public:
 				{
 				case EVENT_LIMB_RIP:
 					DoCastVictim(SPELL_LIMB_RIP);	
-					events.ScheduleEvent(EVENT_LIMB_RIP, 10000); //TODO Find out the correct Time
+					events.ScheduleEvent(EVENT_LIMB_RIP, 12000); //TODO Find out the correct Time
+					break;
+				case EVENT_RIPLIMB_RESPAWN_H:
+					if(GetShannox() != NULL)
+					{
+						if(GetShannox()->isAlive())
+							me->Respawn();
+					}
 					break;
 				default:
 					break;
@@ -523,7 +534,7 @@ public:
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 				}
 
-				if(GetShannox()->GetDistance2d(me) >= 40 && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
+				if(GetShannox()->GetDistance2d(me) >= 70 && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
 				{
 					DoCast(me, SPELL_SEPERATION_ANXIETY);
 				}
@@ -535,10 +546,10 @@ public:
 			DoMeleeAttackIfReady();
 		}
 
-		void DamageDealt(Unit* /*victim*/, uint32& /*damage*/, DamageEffectType /*damageType*/)
+		void DamageDealt(Unit* victim, uint32& damage, DamageEffectType /*damageType*/)
 		{
 			// Feeding Frenzy (Heroic Ability)
-			if(me->GetMap()->IsHeroic())
+			if(me->GetMap()->IsHeroic() && damage > 0)
 				DoCast(me, SPELL_FEEDING_FRENZY_H);
 		}
 
@@ -593,11 +604,18 @@ public:
 
 		void EnterCombat(Unit * /*who*/)
 		{
-			/*if (GetRiplimb() != NULL)
-			me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
-			,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),2,1);
-			*/
 			me->MonsterSay("Spear Triggered",0,0);
+
+			if (GetRiplimb() != NULL)
+			me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
+			,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),5,1);
+
+			for(int i=0;i<30;i++)
+			{
+				me->CastSpell(me->GetPositionX()+(urand(0,20)-10),me->GetPositionY()+(urand(0,20)-10),
+					me->GetPositionZ(),SPELL_MAGMA_RUPTURE_VISUAL,true);
+			}
+
 			DoCast(SPELL_MAGMA_FLARE);
 		}
 
