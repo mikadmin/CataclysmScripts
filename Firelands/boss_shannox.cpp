@@ -33,7 +33,7 @@
 - [75%] Insert Heroic Spells
 - Insert the Sound data
 - [100% DONE] The Script Crashes sometimes (I'm not sure weather this
-  is the fault of this Script or the Core)
+is the fault of this Script or the Core)
 - [100% DONE] Add Trigger for the 'Seperation Anxietly' Spell
 - [25%] Add Trigger for the Fire Nova when the Spear is reaching the Ground
 - Add Action that Shannox throws the Spear to Riplimb
@@ -75,7 +75,8 @@ enum Spells
 	SPELL_IMMOLATION_TRAP = 52606, //Place a fire trap that will burn the first enemy to approach for <Unknown value - The spell referenced no longer exists> Fire damage over <Unknown value - The spell referenced no longer exists>.  Trap will exist for 30 sec.  Only one trap can be active at a time.(Drop Trap (181030))
 
 	// Riplimb
-	SPELL_LIMB_RIP = 99832, //The hellhound tears viciously at an enemy's exposed flesh, dealing 130% of normal damage and causing a bleeding wound that deals 0 damage every 5 sec for until cancelled. (Triggers Jagged Tear)
+	SPELL_LIMB_RIP = 99832,
+	SPELL_DOGGED_DETERMINATION = 101111,
 
 	// Rageface
 	SPELL_FACE_RAGE = 99947, //Pins an enemy to the ground, stunning them and tearing at their flesh to deal 38 to 42 damage every 0.5 sec for 30 sec.
@@ -83,6 +84,11 @@ enum Spells
 	// Both Dogs
 	SPELL_FRENZIED_DEVOLUTION = 100064,
 	SPELL_FEEDING_FRENZY_H = 100655,
+
+	SPELL_WARY_10N = 100167, // Buff when the Dog gos in a Trap
+	SPELL_WARY_25N = 101215,
+	SPELL_WARY_10H = 101216,
+	SPELL_WARY_25H = 101217,
 
 	// Misc
 	SPELL_SEPERATION_ANXIETY = 99835,
@@ -96,7 +102,6 @@ enum Spells
 	CRYSTAL_PRISON_EFFECT = 99837,
 
 	// Dont know weather i implement that...
-	SPELL_DOGGED_DETERMINATION = 101111, //Filled with a sense of purpose, the hound resists attempts to hinder its path back to its master.
 	SPELL_FRENZY_RIPLIMB = 100522, //Increases attack speed by 30% and physical damage dealt by 30%.
 
 };
@@ -116,7 +121,10 @@ enum Events
 	EVENT_RIPLIMB_RESPAWN_H = 8,
 
 	//Rageface
-	EVENT_FACE_RAGE = 9
+	EVENT_FACE_RAGE = 9,
+
+	// Trigger for the Crystal Trap
+	EVENT_CRYSTAL_TRAP_TRIGGER = 10,
 
 };
 
@@ -202,9 +210,9 @@ public:
 		{
 			summons.Summon(summon);
 			summon->setActive(true);
-			
+
 			if(me->isInCombat())
-			summon->AI()->DoZoneInCombat();
+				summon->AI()->DoZoneInCombat();
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -227,7 +235,7 @@ public:
 			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000);
 			events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);
 			events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 20000); //TODO Find out the correct Time
-
+			events.ScheduleEvent(EVENT_SUMMON_CRYSTAL_PRISON, 25000);
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
 			DoScriptText(SAY_AGGRO, me, who);
@@ -270,17 +278,29 @@ public:
 						DoCast(SPELL_MAGMA_RUPTURE_SHANNOX);
 					}else
 					{
-						 // Throw Spear if Riplimb is Alive and Shannox has the Spear
+						// Throw Spear if Riplimb is Alive and Shannox has the Spear
 						if (phase == PHASE_HAS_SPEER)
 						{
-						DoCast(SPELL_HURL_SPEAR_SUMMON);
-						DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
-						phase = PHASE_NON;
+							DoCast(SPELL_HURL_SPEAR_SUMMON);
+							DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
+							phase = PHASE_NON;
 						}else
-						// Shifts the Event back if Shannox has not the Spear yet
-						events.RescheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
+							// Shifts the Event back if Shannox has not the Spear yet
+							events.RescheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
 					}
 
+					break;
+
+				case EVENT_SUMMON_CRYSTAL_PRISON:
+					if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500, true))
+						pRiplimb = me->SummonCreature(NPC_CRYSTAL_TRAP, tempTarget->GetPositionX()
+						,tempTarget->GetPositionY(),tempTarget->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
+					events.ScheduleEvent(EVENT_SUMMON_CRYSTAL_PRISON, 25000);
+					break;
+
+				case EVENT_RIPLIMB_RESPAWN_H:
+					pRiplimb->Respawn();
+					DoZoneInCombat();
 					break;
 
 				default:
@@ -293,6 +313,10 @@ public:
 
 			if ((pRiplimb->isDead() || pRageface -> isDead()) && !softEnrage)
 			{
+				// Heroic: Respawn Riplimb 30s after he is Death
+				if(pRiplimb->isDead() && me->GetMap()->IsHeroic())
+					events.ScheduleEvent(EVENT_RIPLIMB_RESPAWN_H, 30000);
+
 				DoCast(me, SPELL_FRENZY_SHANNOX);
 				DoScriptText(SAY_ON_DOGS_FALL, me);
 				DoScriptText(SAY_SOFT_ENRAGE, me);
@@ -491,8 +515,6 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
-			if(me->GetMap()->IsHeroic())
-			events.ScheduleEvent(EVENT_RIPLIMB_RESPAWN_H, 30000);
 		}
 
 		void EnterCombat(Unit * who)
@@ -513,13 +535,6 @@ public:
 				case EVENT_LIMB_RIP:
 					DoCastVictim(SPELL_LIMB_RIP);	
 					events.ScheduleEvent(EVENT_LIMB_RIP, 12000); //TODO Find out the correct Time
-					break;
-				case EVENT_RIPLIMB_RESPAWN_H:
-					if(GetShannox() != NULL)
-					{
-						if(GetShannox()->isAlive())
-							me->Respawn();
-					}
 					break;
 				default:
 					break;
@@ -607,13 +622,13 @@ public:
 			me->MonsterSay("Spear Triggered",0,0);
 
 			if (GetRiplimb() != NULL)
-			me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
-			,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),5,1);
+				me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
+				,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),5,1);
 
-			for(int i=0;i<30;i++)
+			for(int i=0;i<400;i++)
 			{
-				me->CastSpell(me->GetPositionX()+(urand(0,20)-10),me->GetPositionY()+(urand(0,20)-10),
-					me->GetPositionZ(),SPELL_MAGMA_RUPTURE_VISUAL,true);
+				me->CastSpell(me->GetPositionX()+(urand(0,40)-20),me->GetPositionY()+(urand(0,40)-20),
+					46,SPELL_MAGMA_RUPTURE_VISUAL,true);
 			}
 
 			DoCast(SPELL_MAGMA_FLARE);
@@ -635,6 +650,81 @@ public:
 		Creature* GetRiplimb()
 		{
 			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_RIPLIMB));
+		}
+	};
+};
+
+/*#########################
+####### Crystal Trap ######
+#########################*/
+
+class npc_crystal_trap : public CreatureScript
+{
+public:
+	npc_crystal_trap() : CreatureScript("npc_crystal_trap"){}
+
+	CreatureAI* GetAI(Creature* creature) const
+	{
+		return new npc_crystal_trapAI(creature);
+	}
+
+	struct npc_crystal_trapAI : public ScriptedAI
+	{
+		npc_crystal_trapAI(Creature *c) : ScriptedAI(c)
+		{
+			instance = me->GetInstanceScript();
+
+			//me->SetReactState(REACT_PASSIVE);
+			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+		}
+
+		InstanceScript* instance;
+		EventMap events;
+
+		void Reset()
+		{
+			events.Reset();
+		}
+
+		void EnterCombat(Unit * /*who*/)
+		{
+			me->MonsterSay("Prison Triggered",0,0);
+			events.Reset();
+			events.ScheduleEvent(EVENT_CRYSTAL_TRAP_TRIGGER, 4000);
+
+		}
+
+void UpdateAI(const uint32 diff)
+		{
+			if (!me->getVictim()) {}
+
+			events.Update(diff);
+
+			while (uint32 eventId = events.ExecuteEvent())
+			{
+				switch (eventId)
+				{
+				case EVENT_CRYSTAL_TRAP_TRIGGER:
+					me->MonsterSay("Event Triggered",0,0);
+					if (Unit* tempTarget = SelectTarget(SELECT_TARGET_NEAREST, 0, 5, false))
+					{
+						
+						me->SummonGameObject(GOBCrystalTrapIce,me->GetPositionX()
+						,me->GetPositionY(),me->GetPositionZ(), 0, 0, 0, 0, 0, 50000);
+						me->RemoveFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+						me->MonsterSay("Ice Triggered",0,0);
+					}
+									
+					break;
+				default:
+					break;
+				}
+			}	
+
+			if (!UpdateVictim())
+				return;
+
+			DoMeleeAttackIfReady();
 		}
 	};
 };
@@ -683,7 +773,8 @@ void AddSC_boss_shannox()
 	new boss_shannox();
 	new npc_rageface();
 	new npc_riplimb();
+	new npc_shannox_spear();
+	new npc_crystal_trap();
 	new achievement_bucket_list();
 	new achievement_heroic_shannox();
-	new npc_shannox_spear();
 }

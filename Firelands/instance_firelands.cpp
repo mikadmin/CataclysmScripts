@@ -63,7 +63,7 @@ public:
 		void Initialize()
 		{
 			SetBossNumber(MAX_ENCOUNTER);
-			
+
 			uiBethilac                     = 0;
 			uiRhyolith		             = 0;
 			uiAlysrazar		             = 0;
@@ -79,11 +79,11 @@ public:
 				Encounter[i] = NOT_STARTED;
 		}
 
-		            void OnPlayerEnter(Player* player)
-            {
-                if (!TeamInInstance)
-                    TeamInInstance = player->GetTeam();
-            }
+		void OnPlayerEnter(Player* player)
+		{
+			if (!TeamInInstance)
+				TeamInInstance = player->GetTeam();
+		}
 
 		bool IsEncounterInProgress() const
 		{
@@ -98,13 +98,13 @@ public:
 
 		void OnCreatureCreate(Creature* creature)
 		{
-			                if (!TeamInInstance)
-                {
-                    Map::PlayerList const &players = instance->GetPlayers();
-                    if (!players.isEmpty())
-                        if (Player* player = players.begin()->getSource())
-                            TeamInInstance = player->GetTeam();
-             }
+			if (!TeamInInstance)
+			{
+				Map::PlayerList const &players = instance->GetPlayers();
+				if (!players.isEmpty())
+					if (Player* player = players.begin()->getSource())
+						TeamInInstance = player->GetTeam();
+			}
 
 			switch (creature->GetEntry())
 			{
@@ -132,10 +132,10 @@ public:
 				break;
 
 				// Npcs
-			/*case NPC_RAGEFACE:
+				/*case NPC_RAGEFACE:
 				uiRageface = creature->GetGUID();
 				break;
-			case NPC_RIPLIMB:
+				case NPC_RIPLIMB:
 				uiRiplimb = creature->GetGUID();
 				break;*/
 
@@ -177,19 +177,19 @@ public:
 			/*switch (type)
 			{
 			case BOSS_BETHTILAC:
-				break;
+			break;
 			case BOSS_RHYOLITH:
-				break;
+			break;
 			case BOSS_ALYSRAZAR:
-				break;
+			break;
 			case BOSS_SHANNOX:
-				break;
+			break;
 			case BOSS_BALOROC:
-				break;
+			break;
 			case BOSS_MAJORDOMUS:
-				break;
+			break;
 			case BOSS_RAGNAROS:
-				break;
+			break;
 
 			}*/
 
@@ -252,38 +252,38 @@ public:
 			return 0;
 		}
 
-        std::string GetSaveData()
-        {
-            std::ostringstream saveStream;
-            saveStream << "F L ";
-            for(int i = 0; i < MAX_ENCOUNTER; ++i)
-                saveStream << Encounter[i] << " ";
+		std::string GetSaveData()
+		{
+			std::ostringstream saveStream;
+			saveStream << "F L ";
+			for(int i = 0; i < MAX_ENCOUNTER; ++i)
+				saveStream << Encounter[i] << " ";
 
-            return saveStream.str();
-        }
+			return saveStream.str();
+		}
 
 		void Load(const char * data)
-        {
-            std::istringstream loadStream(data);
-            char dataHead1, dataHead2;
-            loadStream >> dataHead1 >> dataHead2;
-            std::string newdata = loadStream.str();
+		{
+			std::istringstream loadStream(data);
+			char dataHead1, dataHead2;
+			loadStream >> dataHead1 >> dataHead2;
+			std::string newdata = loadStream.str();
 
-            uint32 buff;
-            if(dataHead1 == 'F' && dataHead2 == 'L')
-            {
-                for(int i = 0; i < MAX_ENCOUNTER; ++i)
-                {
-                    loadStream >> buff;
-                    Encounter[i]= buff;
-                }
-            }
+			uint32 buff;
+			if(dataHead1 == 'F' && dataHead2 == 'L')
+			{
+				for(int i = 0; i < MAX_ENCOUNTER; ++i)
+				{
+					loadStream >> buff;
+					Encounter[i]= buff;
+				}
+			}
 
-            for(int i = 0; i < MAX_ENCOUNTER; ++i)
-                if(Encounter[i] != DONE)
-                    Encounter[i] = NOT_STARTED;
-        }
-};
+			for(int i = 0; i < MAX_ENCOUNTER; ++i)
+				if(Encounter[i] != DONE)
+					Encounter[i] = NOT_STARTED;
+		}
+	};
 
 	InstanceScript* GetInstanceScript(InstanceMap* map) const
 	{

@@ -46,6 +46,7 @@ NPC_MOLTEN_ELEMENTAR = 53189,
 NPC_RIPLIMB = 53694, // Shannox Dogs
 NPC_RAGEFACE = 53695,
 NPC_SHANNOX_SPEAR = 53752, // Shannox Spear
+NPC_CRYSTAL_TRAP = 53713,
 
 };
 
@@ -79,7 +80,7 @@ ACTION_SULFURAS_SMASH //target for smashes
 
 enum GameObjectsIds
 {
-     rhyolith_vulkan = 0
+    GOBCrystalTrapIce = 181247,
 };
 
 #endif
