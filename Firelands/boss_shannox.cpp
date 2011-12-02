@@ -35,7 +35,7 @@
 - [FIXXED] The Script Crashes sometimes (I'm not sure weather this
 is the fault of this Script or the Core)
 - Add Handling for Hurling the Spear
-- [25%] Add Trigger for the 'Seperation Anxietly' Spell
+- [100%] Add Trigger for the 'Seperation Anxietly' Spell
 - [25%] Add Trigger for the Fire Nova when the Spear is reaching the Ground
 - Add Action that Shannox throws the Spear to Riplimb
 - Add Action that Riplimb is taking the Spear back to Shannox
@@ -59,53 +59,59 @@ enum Spells
 {
 
 	//Shannox
-	SPELL_ARCTIC_SLASH_10N = 99931, // Inflicts 125% of weapon damage to enemies 
-	SPELL_ARCTIC_SLASH_25N = 101201, // in front of the caster, and causes a Jagged
-	SPELL_ARCTIC_SLASH_10H = 101202, // Tear on the caster's primary target.
-	SPELL_ARCTIC_SLASH_25H = 101203, //(Trigger Spell Jagged Tear)
-	
-	SPELL_BERSERK = 26662, 
+	SPELL_ARCTIC_SLASH_10N = 99931,
+	SPELL_ARCTIC_SLASH_25N = 101201,
+	SPELL_ARCTIC_SLASH_10H = 101202,
+	SPELL_ARCTIC_SLASH_25H = 101203,
+
+	SPELL_BERSERK = 26662,
+
 	SPELL_CALL_SPEAR = 100663, // Script Effect Value: 49575
 	SPELL_HURL_SPEAR = 100002, // Dummy Effect & Damage
 	SPELL_HURL_SPEAR_SUMMON = 99978, //Summons Spear of Shannox
 	SPELL_HURL_SPEAR_DUMMY_SCRIPT = 100031, //Dummy Value: 99978
-	SPELL_JAGGED_TEAR = 99937, //Deals 2500 damage every 3 sec for 24 sec. Stacks.
 	SPELL_MAGMA_RUPTURE_SHANNOX = 99840, //Causes a massive explosion of magma, dealing 47500 to 52500 Fire damage to all nearby enemies, increasing Fire damage taken by 40% for 1 min, and triggering eruptions of magma. 
-	SPELL_SEPERATION_ANXIETY = 99835, //When the distance between the huntsman and his pets grows too great, both become extremely agitated, increasing their damage and attack speed by 100%. (Effect #1	Apply Aura: Mod Damage Done % (127) Value: 100 Effect #2	Apply Aura: ?? (Aura #319) Value: 100)
-	SPELL_FRENZY_SHANNOX = 23537,// Increases the caster's attack speed by 50% and the Physical damage it deals by 219 to 281 for 10 min. (Spell Aura = 9204)
 
-	//Misc
+	SPELL_FRENZY_SHANNOX = 23537,// Increases the caster's attack speed by 50% and the Physical damage it deals by 219 to 281 for 10 min. (Spell Aura = 9204)
 	SPELL_IMMOLATION_TRAP = 52606, //Place a fire trap that will burn the first enemy to approach for <Unknown value - The spell referenced no longer exists> Fire damage over <Unknown value - The spell referenced no longer exists>.  Trap will exist for 30 sec.  Only one trap can be active at a time.(Drop Trap (181030))
 
-	//Riplimb
-	SPELL_DOGGED_DETERMINATION = 101111, //Filled with a sense of purpose, the hound resists attempts to hinder its path back to its master.
-	SPELL_FRENZY_RIPLIMB = 100522, //Increases attack speed by 30% and physical damage dealt by 30%.
+	// Riplimb
 	SPELL_LIMB_RIP = 99832, //The hellhound tears viciously at an enemy's exposed flesh, dealing 130% of normal damage and causing a bleeding wound that deals 0 damage every 5 sec for until cancelled. (Triggers Jagged Tear)
-	SPELL_FRENZIED_DEVOLUTION = 100064, //Increases the caster's attack and movement speeds by 200% and all damage it deals by 400%. (Applys some Auras)
-	SPELL_FEEDING_FRENZY_H = 100655, //Successful melee attacks drive the hound into a feeding frenzy, granting a stacking 5% bonus to physical damage dealt for 20 sec.
 
-	//Rageface
+	// Rageface
 	SPELL_FACE_RAGE = 99947, //Pins an enemy to the ground, stunning them and tearing at their flesh to deal 38 to 42 damage every 0.5 sec for 30 sec.
-	BUFF_FACE_RAGE = 100129, // I'll hope this is correct
+
+	// Both Dogs
+	SPELL_FRENZIED_DEVOLUTION = 100064,
+	SPELL_FEEDING_FRENZY_H = 100655,
+
+	// Misc
+	SPELL_SEPERATION_ANXIETY = 99835,
 
 	//Spear Abilities
 	SPELL_MAGMA_FLARE = 100495, // Inflicts Fire damage to enemies within 50 yards.
 	SPELL_MAGMA_RUPTURE = 100003, // Calls forth magma eruptions to damage nearby foes. (Dummy Effect)
+
+	// Dont know weather i implement that...
+	SPELL_DOGGED_DETERMINATION = 101111, //Filled with a sense of purpose, the hound resists attempts to hinder its path back to its master.
+	SPELL_FRENZY_RIPLIMB = 100522, //Increases attack speed by 30% and physical damage dealt by 30%.
+
 };
 
 enum Events
 {
 	//Shannox
-	EVENT_IMMOLTATION_TRAP,
-	EVENT_BERSERK,
-	EVENT_ARCING_SLASH,
-	EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE,
-	EVENT_SUMMON_SPEAR,
+	EVENT_IMMOLTATION_TRAP = 1,
+	EVENT_BERSERK = 2,
+	EVENT_ARCING_SLASH = 3,
+	EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE = 4,
+	EVENT_SUMMON_SPEAR = 5,
+
 	//Riplimb
-	EVENT_LIMB_RIP,
+	EVENT_LIMB_RIP = 6,
 
 	//Rageface
-	EVENT_FACE_RAGE,
+	EVENT_FACE_RAGE = 7,
 
 };
 
@@ -114,6 +120,7 @@ enum Phases
 	PHASE_NON,
 	PHASE_HAS_SPEER,
 	PHASE_BRING_SPEER_BACK,
+	PHASE_RAGEFACING,
 };
 
 
@@ -147,6 +154,7 @@ public:
 		InstanceScript* instance;
 		Creature* pRiplimb;
 		Creature* pRageface;
+		Unit* tempUnit;
 		bool softEnrage;
 		bool bucketListCheckPoints[5];
 		Phases phase;
@@ -155,8 +163,8 @@ public:
 		{
 			me->RemoveAllAuras();
 			me->GetMotionMaster()->MoveTargetedHome();
-			instance->SetBossState(DATA_SHANNOX, NOT_STARTED);
 			softEnrage = false;
+			tempUnit = NULL;
 			events.Reset();
 			phase = PHASE_HAS_SPEER;
 
@@ -180,7 +188,7 @@ public:
 					,me->GetPositionY()+urand(6,8),me->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
 			};
 
-			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 
 			_Reset();
 		}
@@ -196,7 +204,6 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
-			instance->SetBossState(DATA_SHANNOX, DONE);
 			DoScriptText(SAY_ON_DEAD, me);
 
 			summons.DespawnAll(); // Despawns all Dogs Spears etc.
@@ -206,11 +213,9 @@ public:
 
 		void EnterCombat(Unit* who)
 		{
-			instance->SetBossState(DATA_SHANNOX,IN_PROGRESS);
-
 			DoZoneInCombat();
 
-			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 20000); //TODO Find out the correct Time
+			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000); //TODO Find out the correct Time
 			events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);  //TODO Find out the correct Time
 			events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 20000); //TODO Find out the correct Time
 
@@ -226,43 +231,58 @@ public:
 			if (!me->getVictim()) {}
 
 			events.Update(diff);
+
+			if (me->HasUnitState(UNIT_STAT_CASTING))
+                return;
+			
 			while (uint32 eventId = events.ExecuteEvent())
 			{
 				switch (eventId)
 				{
 				case EVENT_IMMOLTATION_TRAP:
-					//tempUnit = SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true);
-					//me->CastSpell(SPELL_IMMOLATION_TRAP, tempUnit->GetPositionX(),tempUnit->GetPositionY(),tempUnit->GetPositionZ());
-					events.RepeatEvent(15000); //TODO Find out the correct Time
+					{
+					me->MonsterSay("[DEBUG] Lege Feuerfalle",0,0);
+					/*tempUnit = SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true);
+					DoCast(SelectTarget(SELECT_TARGET_RANDOM, 1, 60, true), SPELL_IMMOLATION_TRAP);*/
+					DoCast(SPELL_IMMOLATION_TRAP);
+					events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000); //TODO Find out the correct Time
 					break;
+					}
 				case EVENT_ARCING_SLASH:
+					{
 					DoCast(RAID_MODE(SPELL_ARCTIC_SLASH_10N, SPELL_ARCTIC_SLASH_25N,
 						SPELL_ARCTIC_SLASH_10H, SPELL_ARCTIC_SLASH_25H));
 					events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);
 					break;
+					}
 				case EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE:
+					{
 					if (phase = PHASE_HAS_SPEER)
 					{
-						/*if(pRiplimb->isDead())
-					{ // Magma Rupture when Ripclimb is Death
-						DoCast(SPELL_MAGMA_RUPTURE_SHANNOX);
+						if(pRiplimb->isDead())
+						{ // Magma Rupture when Ripclimb is Death
+							DoCast(SPELL_MAGMA_RUPTURE_SHANNOX);
 
-						}else
-					{ // Hurl Spear when Riplimb is Alive*/
-					DoCast(SPELL_HURL_SPEAR_SUMMON);
-					DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
-					DoZoneInCombat();
-						//DoCast(SPELL_HURL_SPEAR);
-					//}
-					events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 30000); //Corrects Time is 43s
+						}/*else
+						 { // Hurl Spear when Riplimb is Alive
+						 DoCast(SPELL_HURL_SPEAR_SUMMON);
+						 DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
+						 DoZoneInCombat();
+						 //DoCast(SPELL_HURL_SPEAR);
+						 }*/
+						events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 30000); //Corrects Time is 43s
 					}else
 					{ // Shifts the Event 10s back
 						events.RescheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
 					}
 					break;
+					}
 
 				case EVENT_BERSERK:
 					DoCast(me, SPELL_BERSERK);
+					break;
+	
+				default:
 					break;
 				}
 			}
@@ -273,9 +293,15 @@ public:
 			if ((pRiplimb->isDead() || pRageface -> isDead()) && !softEnrage)
 			{
 				DoCast(me, SPELL_FRENZY_SHANNOX);
-				DoScriptText(SAY_ON_DOGS_FALL, me);
+				Talk(SAY_ON_DOGS_FALL);
 				me->MonsterTextEmote(SAY_SOFT_ENRAGE, 0, true);
 				softEnrage = true;
+			}
+
+			if((pRiplimb->GetDistance2d(me) >= 40 || pRageface->GetDistance2d(me) >= 40)
+				&& !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
+			{
+				DoCast(me, SPELL_SEPERATION_ANXIETY);
 			}
 
 			DoMeleeAttackIfReady();
@@ -310,20 +336,18 @@ public:
 		EventMap events;
 		Unit* shallTarget;
 		bool frenzy;
-		bool stackerStopper;
-		bool seperation;
-		
+		Phases phase;
+
 		void Reset()
 		{
-			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
+			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 
 			me->RemoveAllAuras();
 			events.Reset();
 			frenzy = false;
-			stackerStopper = false;
 			shallTarget = NULL;
-			seperation = false;
-						
+			phase = PHASE_NON;
+
 			me->GetMotionMaster()->MoveTargetedHome();
 			//me->GetMotionMaster()->MoveFollow(pShannox, 5, 5);
 		}
@@ -380,6 +404,8 @@ public:
 					//me->getVictim()->SetFlag(UNIT_FIELD_FLAGS,  UNIT_STAT_STUNNED);
 					//me->getVictim()->AddUnitState(UNIT_STAT_STUNNED);
 					break;
+				default:
+					break;
 				}
 			}
 
@@ -393,19 +419,8 @@ public:
 
 				if(GetShannox()->GetDistance2d(me) >= 40 && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
 				{
-					me->MonsterSay("[DEBUG] Seperation added!",0,0);
-					//seperation = true;
 					DoCast(me, SPELL_SEPERATION_ANXIETY);
-					
-					
 				}
-				
-				/*if (seperation && GetShannox()->GetDistance2d(me) <= 35)
-				{
-					me->MonsterSay("[DEBUG] Seperation disadded!",0,0);
-					seperation = false;
-					me->RemoveAura(SPELL_SEPERATION_ANXIETY);
-				}*/
 			}
 
 
@@ -449,14 +464,13 @@ public:
 		npc_riplimbAI(Creature *c) : ScriptedAI(c)
 		{
 			instance = me->GetInstanceScript();
-			
+
 			Reset();
 		}
 
 		InstanceScript* instance;
 		EventMap events;
 		bool frenzy;
-		bool doggedDeterminaton;
 
 		void Reset()
 		{
@@ -465,7 +479,6 @@ public:
 			me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 			me->GetMotionMaster()->MoveTargetedHome();
 			frenzy = false;
-			doggedDeterminaton = false;
 
 			//me->GetMotionMaster()->MoveFollow(pShannox, 10, 7);
 		}
@@ -497,6 +510,8 @@ public:
 					DoCastVictim(SPELL_LIMB_RIP);	
 					events.ScheduleEvent(EVENT_LIMB_RIP, 10000); //TODO Find out the correct Time
 					break;
+				default:
+					break;
 				}
 			}
 
@@ -508,24 +523,11 @@ public:
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 				}
 
-				if(GetShannox()->GetDistance2d(me) >= 40) //TODO Sniff right Distance
+				if(GetShannox()->GetDistance2d(me) >= 40 && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
 				{
-					//DoCast(me, SPELL_DOGGED_DETERMINATION);
-					doggedDeterminaton = true;
-					me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),
-						GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
-				}
-
-				if (doggedDeterminaton && GetShannox()->GetDistance2d(me) <= 35)
-				{
-					me->GetMotionMaster()->MoveIdle();
-					doggedDeterminaton = false;
-					//me->RemoveAurasDueToSpell(SPELL_DOGGED_DETERMINATION);
-
-
+					DoCast(me, SPELL_SEPERATION_ANXIETY);
 				}
 			}
-
 
 			if (!UpdateVictim())
 				return;
@@ -592,9 +594,9 @@ public:
 		void EnterCombat(Unit * /*who*/)
 		{
 			/*if (GetRiplimb() != NULL)
-				me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
-				,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),2,1);
-*/
+			me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
+			,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),2,1);
+			*/
 			me->MonsterSay("Spear Triggered",0,0);
 			DoCast(SPELL_MAGMA_FLARE);
 		}
