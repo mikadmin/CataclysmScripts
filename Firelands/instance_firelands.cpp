@@ -132,12 +132,12 @@ public:
 				break;
 
 				// Npcs
-				/*case NPC_RAGEFACE:
+				case NPC_RAGEFACE:
 				uiRageface = creature->GetGUID();
 				break;
 				case NPC_RIPLIMB:
 				uiRiplimb = creature->GetGUID();
-				break;*/
+				break;
 
 			}
 
@@ -208,6 +208,7 @@ public:
 
 		void SetData64(uint32 /*type*/, uint64 /*data*/)
 		{
+
 		}
 
 		uint64 GetData64(uint32 data)

@@ -127,7 +127,7 @@ enum Events
 	EVENT_CRYSTAL_TRAP_TRIGGER = 10,
 
 	// Trigger for self Dispawn (Crystal Prison)
-	EVENT_CRYSTAL_PRISON_TRIGGER = 11,
+	EVENT_CRYSTAL_PRISON_DESPAWN = 11,
 
 };
 
@@ -171,6 +171,7 @@ public:
 		Creature* pRiplimb;
 		Creature* pRageface;
 		bool softEnrage;
+		bool riplimbIsRespawning;
 		bool bucketListCheckPoints[5];
 		Phases phase;
 
@@ -179,6 +180,7 @@ public:
 			me->RemoveAllAuras();
 			me->GetMotionMaster()->MoveTargetedHome();
 			softEnrage = false;
+			riplimbIsRespawning = false;
 			events.Reset();
 			phase = PHASE_HAS_SPEER;
 
@@ -304,6 +306,7 @@ public:
 					break;
 
 				case EVENT_RIPLIMB_RESPAWN_H:
+					riplimbIsRespawning = false;
 					pRiplimb->Respawn();
 					DoZoneInCombat();
 					break;
@@ -319,8 +322,11 @@ public:
 			if ((pRiplimb->isDead() || pRageface -> isDead()) && !softEnrage)
 			{
 				// Heroic: Respawn Riplimb 30s after he is Death
-				if(pRiplimb->isDead() && me->GetMap()->IsHeroic())
+				if(pRiplimb->isDead() && me->GetMap()->IsHeroic() && (!riplimbIsRespawning))
+				{
+					riplimbIsRespawning = true;
 					events.ScheduleEvent(EVENT_RIPLIMB_RESPAWN_H, 30000);
+				}
 
 				DoCast(me, SPELL_FRENZY_SHANNOX);
 				DoScriptText(SAY_ON_DOGS_FALL, me);
@@ -328,11 +334,9 @@ public:
 				softEnrage = true;
 			}
 
-			if((pRiplimb->GetDistance2d(me) >= 70 || pRageface->GetDistance2d(me) >= 70)
-				&& !me->HasAura(SPELL_SEPERATION_ANXIETY))
-			{
+			if((pRiplimb->GetDistance2d(me) >= 70 || pRageface->GetDistance2d(me) >= 70) && (!me->HasAura(SPELL_SEPERATION_ANXIETY)))
 				DoCast(me, SPELL_SEPERATION_ANXIETY);
-			}
+
 
 			DoMeleeAttackIfReady();
 		}
@@ -625,17 +629,17 @@ public:
 		void EnterCombat(Unit * /*who*/)
 		{
 			me->MonsterSay("Spear Triggered",0,0);
-
+			/*
 			if (GetRiplimb() != NULL)
 				me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
 				,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),5,1);
 
-			for(int i=0;i<400;i++)
+			for(int i=0;i<10;i++)
 			{
 				me->CastSpell(me->GetPositionX()+(urand(0,40)-20),me->GetPositionY()+(urand(0,40)-20),
 					46,SPELL_MAGMA_RUPTURE_VISUAL,true);
 			}
-
+			*/
 			DoCast(SPELL_MAGMA_FLARE);
 		}
 
@@ -678,20 +682,22 @@ public:
 		npc_crystal_trapAI(Creature *c) : Scripted_NoMovementAI(c)
 		{
 			instance = me->GetInstanceScript();
-			myPrison = NULL;
 			tempTarget = NULL;
+			myPrison = NULL;
+			//me->SetReactState(REACT_PASSIVE);
 			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE /*| UNIT_FLAG_NOT_SELECTABLE*/);
+			events.Reset();
 		}
 
 		InstanceScript* instance;
 		EventMap events;
 		Unit* tempTarget;
-		Unit* myPrison;
+		Creature* myPrison;
 
 		void JustDied(Unit * /*victim*/)
 		{
 		}
-		
+
 		void Reset()
 		{
 			events.Reset();
@@ -699,7 +705,6 @@ public:
 
 		void EnterCombat(Unit * /*who*/)
 		{
-			events.Reset();
 			events.ScheduleEvent(EVENT_CRYSTAL_TRAP_TRIGGER, 4000);
 			me->MonsterSay("Trap Summoned",0,0);
 		}
@@ -716,44 +721,54 @@ public:
 				{
 				case EVENT_CRYSTAL_TRAP_TRIGGER:
 					me->MonsterSay("Trap Event Triggered",0,0);
-					if (tempTarget = SelectTarget(SELECT_TARGET_NEAREST, 0, 5, false))
-					{ 
 
-						if (tempTarget->GetEntry() == NPC_RIPLIMB && tempTarget->HasAura
-							(RAID_MODE(SPELL_WARY_10N, SPELL_WARY_25N, SPELL_WARY_10H, SPELL_WARY_25H)))
-						{ // If Dog has Aura Wary
+					// Riplimb has a higher Priority than Players...
 
-							// Check weather other Players are in Range
-							tempTarget = NULL;
-							tempTarget = SelectTarget(SELECT_TARGET_NEAREST, 0, 5, true);
+					if(GetRiplimb() != NULL)
+					{
+						me->MonsterSay("0",0,0);
 
-							if (tempTarget != NULL)
-							{ // If another Player is in Range
-
-								myPrison = me->SummonCreature(NPC_CRYSTAL_PRISON,me->GetPositionX()
-									,me->GetPositionY(),me->GetPositionZ());
-								DoCast(tempTarget,CRYSTAL_PRISON_EFFECT);
-
-								me->MonsterSay("Ice Triggered",0,0);
-
-							}else // If no other Player is in Range ...
-								events.ScheduleEvent(EVENT_CRYSTAL_TRAP_TRIGGER, 500);
-
+						if(GetRiplimb()->GetDistance(me) <= 1 && !GetRiplimb()->
+							HasAura(RAID_MODE(SPELL_WARY_10N, SPELL_WARY_25N, SPELL_WARY_10H, SPELL_WARY_25H)))
+						{
+							me->MonsterSay("1",0,0);
+							tempTarget = GetRiplimb();
 						}else
-						{ // If the Target can be Trapped (Only Dogs with Spell Wary can't be Trapped)
-
-							myPrison = me->SummonCreature(NPC_CRYSTAL_PRISON,me->GetPositionX()
-									,me->GetPositionY(),me->GetPositionZ());
-							DoCast(tempTarget,CRYSTAL_PRISON_EFFECT);
-
-							me->MonsterSay("Ice Triggered",0,0);
-
+						{
+							if (SelectTarget(SELECT_TARGET_NEAREST, 0, 2, true) != NULL)
+							{ 
+								if (SelectTarget(SELECT_TARGET_NEAREST, 0, 2, true)->GetDistance(me) <= 2)
+								{ 
+									me->MonsterSay("2",0,0);
+									tempTarget = SelectTarget(SELECT_TARGET_NEAREST, 0, 2, true);
+								}
+							}
 						}
-
-					}else // If no Target exists
+					}
+					if (tempTarget == NULL) // If no Target exists try to get a new Target in 0,5s
+					{
+						me->MonsterSay("3",0,0);
 						events.ScheduleEvent(EVENT_CRYSTAL_TRAP_TRIGGER, 500);
+					}else
+					{ // Intialize Prison if tempTarget was set
+						me->MonsterSay("4",0,0);
+						myPrison = me->SummonCreature(NPC_CRYSTAL_PRISON,me->GetPositionX()
+							,me->GetPositionY(),me->GetPositionZ(),0, TEMPSUMMON_CORPSE_DESPAWN);
+						myPrison->SetReactState(REACT_PASSIVE);
+						DoCast(tempTarget,CRYSTAL_PRISON_EFFECT);
+						events.ScheduleEvent(EVENT_CRYSTAL_PRISON_DESPAWN, 15000);
+					}
 
 					break;
+
+				case EVENT_CRYSTAL_PRISON_DESPAWN:
+
+					myPrison -> DisappearAndDie();
+					tempTarget -> RemoveAurasDueToSpell(CRYSTAL_PRISON_EFFECT);
+					me->DisappearAndDie();
+
+					break;
+
 				default:
 					break;
 				}
@@ -763,13 +778,19 @@ public:
 			{
 				if(myPrison->isDead())
 				{
+					myPrison -> DisappearAndDie();
 					tempTarget -> RemoveAurasDueToSpell(CRYSTAL_PRISON_EFFECT);
-					me->DespawnOrUnsummon();
+					me->DisappearAndDie();
 				}	
 			}	
-				
+
 			if (!UpdateVictim())
 				return;
+		}
+
+		Creature* GetRiplimb()
+		{
+			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_RIPLIMB));
 		}
 	};
 };
@@ -801,12 +822,11 @@ public:
 
 		void Reset()
 		{
-			me->DespawnOrUnsummon();
 		}
 
 		void EnterCombat(Unit * /*who*/)
 		{
-			
+
 		}
 
 		void JustReachedHome()
@@ -862,7 +882,7 @@ void AddSC_boss_shannox()
 	new npc_riplimb();
 	new npc_shannox_spear();
 	new npc_crystal_trap();
-	new npc_crystal_prison();
+	//new npc_crystal_prison();
 	new achievement_bucket_list();
 	new achievement_heroic_shannox();
 }
