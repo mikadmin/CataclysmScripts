@@ -47,6 +47,7 @@ NPC_RIPLIMB = 53694, // Shannox Dogs
 NPC_RAGEFACE = 53695,
 NPC_SHANNOX_SPEAR = 53752, // Shannox Spear
 NPC_CRYSTAL_TRAP = 53713,
+NPC_CRYSTAL_PRISON = 53819,
 
 };
 
@@ -78,9 +79,9 @@ ACTION_RAGNAROS_STANDUP, //only on heroic mode
 ACTION_SULFURAS_SMASH //target for smashes
 };
 
-enum GameObjectsIds
+/*enum GameObjectsIds
 {
-    GOBCrystalTrapIce = 181247,
-};
+    0,
+};*/
 
 #endif

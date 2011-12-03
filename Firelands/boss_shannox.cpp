@@ -39,7 +39,7 @@ is the fault of this Script or the Core)
 - Add Action that Shannox throws the Spear to Riplimb
 - Add Action that Riplimb is taking the Spear back to Shannox
 - The 'Feeding Frenzy Buff' Stacks too fast
-- Add Kristall Trap Actions
+- [75% DONE] Add Kristall Trap Actions
 - [75%] Add Fire Trap Actions (Damage of the Trap is missing)
 */
 
@@ -125,6 +125,9 @@ enum Events
 
 	// Trigger for the Crystal Trap
 	EVENT_CRYSTAL_TRAP_TRIGGER = 10,
+
+	// Trigger for self Dispawn (Crystal Prison)
+	EVENT_CRYSTAL_PRISON_TRIGGER = 11,
 
 };
 
@@ -239,6 +242,8 @@ public:
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
 			DoScriptText(SAY_AGGRO, me, who);
+
+			me->CallForHelp(50);
 
 			_EnterCombat();
 		}
@@ -668,19 +673,25 @@ public:
 		return new npc_crystal_trapAI(creature);
 	}
 
-	struct npc_crystal_trapAI : public ScriptedAI
+	struct npc_crystal_trapAI : public Scripted_NoMovementAI
 	{
-		npc_crystal_trapAI(Creature *c) : ScriptedAI(c)
+		npc_crystal_trapAI(Creature *c) : Scripted_NoMovementAI(c)
 		{
 			instance = me->GetInstanceScript();
-
-			//me->SetReactState(REACT_PASSIVE);
-			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+			myPrison = NULL;
+			tempTarget = NULL;
+			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE /*| UNIT_FLAG_NOT_SELECTABLE*/);
 		}
 
 		InstanceScript* instance;
 		EventMap events;
+		Unit* tempTarget;
+		Unit* myPrison;
 
+		void JustDied(Unit * /*victim*/)
+		{
+		}
+		
 		void Reset()
 		{
 			events.Reset();
@@ -688,13 +699,12 @@ public:
 
 		void EnterCombat(Unit * /*who*/)
 		{
-			me->MonsterSay("Prison Triggered",0,0);
 			events.Reset();
 			events.ScheduleEvent(EVENT_CRYSTAL_TRAP_TRIGGER, 4000);
-
+			me->MonsterSay("Trap Summoned",0,0);
 		}
 
-void UpdateAI(const uint32 diff)
+		void UpdateAI(const uint32 diff)
 		{
 			if (!me->getVictim()) {}
 
@@ -705,26 +715,103 @@ void UpdateAI(const uint32 diff)
 				switch (eventId)
 				{
 				case EVENT_CRYSTAL_TRAP_TRIGGER:
-					me->MonsterSay("Event Triggered",0,0);
-					if (Unit* tempTarget = SelectTarget(SELECT_TARGET_NEAREST, 0, 5, false))
-					{
-						
-						me->SummonGameObject(GOBCrystalTrapIce,me->GetPositionX()
-						,me->GetPositionY(),me->GetPositionZ(), 0, 0, 0, 0, 0, 50000);
-						me->RemoveFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
-						me->MonsterSay("Ice Triggered",0,0);
-					}
-									
+					me->MonsterSay("Trap Event Triggered",0,0);
+					if (tempTarget = SelectTarget(SELECT_TARGET_NEAREST, 0, 5, false))
+					{ 
+
+						if (tempTarget->GetEntry() == NPC_RIPLIMB && tempTarget->HasAura
+							(RAID_MODE(SPELL_WARY_10N, SPELL_WARY_25N, SPELL_WARY_10H, SPELL_WARY_25H)))
+						{ // If Dog has Aura Wary
+
+							// Check weather other Players are in Range
+							tempTarget = NULL;
+							tempTarget = SelectTarget(SELECT_TARGET_NEAREST, 0, 5, true);
+
+							if (tempTarget != NULL)
+							{ // If another Player is in Range
+
+								myPrison = me->SummonCreature(NPC_CRYSTAL_PRISON,me->GetPositionX()
+									,me->GetPositionY(),me->GetPositionZ());
+								DoCast(tempTarget,CRYSTAL_PRISON_EFFECT);
+
+								me->MonsterSay("Ice Triggered",0,0);
+
+							}else // If no other Player is in Range ...
+								events.ScheduleEvent(EVENT_CRYSTAL_TRAP_TRIGGER, 500);
+
+						}else
+						{ // If the Target can be Trapped (Only Dogs with Spell Wary can't be Trapped)
+
+							myPrison = me->SummonCreature(NPC_CRYSTAL_PRISON,me->GetPositionX()
+									,me->GetPositionY(),me->GetPositionZ());
+							DoCast(tempTarget,CRYSTAL_PRISON_EFFECT);
+
+							me->MonsterSay("Ice Triggered",0,0);
+
+						}
+
+					}else // If no Target exists
+						events.ScheduleEvent(EVENT_CRYSTAL_TRAP_TRIGGER, 500);
+
 					break;
 				default:
 					break;
 				}
 			}	
 
+			if(myPrison != NULL)
+			{
+				if(myPrison->isDead())
+				{
+					tempTarget -> RemoveAurasDueToSpell(CRYSTAL_PRISON_EFFECT);
+					me->DespawnOrUnsummon();
+				}	
+			}	
+				
 			if (!UpdateVictim())
 				return;
+		}
+	};
+};
 
-			DoMeleeAttackIfReady();
+/*#########################
+###### Crystal Prison #####
+#########################*/
+
+class npc_crystal_prison : public CreatureScript
+{
+public:
+	npc_crystal_prison() : CreatureScript("npc_crystal_prison"){}
+
+	CreatureAI* GetAI(Creature* creature) const
+	{
+		return new npc_crystal_prisonAI(creature);
+	}
+
+	struct npc_crystal_prisonAI : public Scripted_NoMovementAI
+	{
+		npc_crystal_prisonAI(Creature *c) : Scripted_NoMovementAI(c)
+		{
+			instance = me->GetInstanceScript();
+
+			me->SetReactState(REACT_PASSIVE);
+		}
+
+		InstanceScript* instance;
+
+		void Reset()
+		{
+			me->DespawnOrUnsummon();
+		}
+
+		void EnterCombat(Unit * /*who*/)
+		{
+			
+		}
+
+		void JustReachedHome()
+		{
+			//me->DespawnOrUnsummon();
 		}
 	};
 };
@@ -775,6 +862,7 @@ void AddSC_boss_shannox()
 	new npc_riplimb();
 	new npc_shannox_spear();
 	new npc_crystal_trap();
+	new npc_crystal_prison();
 	new achievement_bucket_list();
 	new achievement_heroic_shannox();
 }

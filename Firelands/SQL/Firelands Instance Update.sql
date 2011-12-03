@@ -22,6 +22,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_rageface' WHERE `entry`=53695 L
 UPDATE `creature_template` SET `ScriptName`='npc_riplimb' WHERE `entry`=53694 LIMIT 1;
 UPDATE `creature_template` SET `ScriptName`='npc_shannox_spear' WHERE `entry`=53752 LIMIT 1;
 UPDATE `creature_template` SET `ScriptName`='npc_crystal_trap' WHERE `entry`=53713 LIMIT 1;
+UPDATE `creature_template` SET `ScriptName`='npc_crystal_prison' WHERE `entry`=53819 LIMIT 1;
 
 -- Bethilac
 -- UPDATE `creature_template` SET `ScriptName`='boss_bethtilac' WHERE `entry`=52498 LIMIT 1;
