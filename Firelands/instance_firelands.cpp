@@ -295,6 +295,12 @@ public:
 				if(Encounter[i] != DONE)
 					Encounter[i] = NOT_STARTED;
 		}
+
+		void Update(uint32 diff)
+            {
+                
+            }
+
 	};
 
 	InstanceScript* GetInstanceScript(InstanceMap* map) const

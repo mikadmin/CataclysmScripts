@@ -1,10 +1,13 @@
+-- Backup
+REPLACE INTO `creature_template` (`entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`, `KillCredit1`, `KillCredit2`, `modelid1`, `modelid2`, `modelid3`, `modelid4`, `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`, `faction_A`, `faction_H`, `npcflag`, `speed_walk`, `speed_run`, `scale`, `rank`, `mindmg`, `maxdmg`, `dmgschool`, `attackpower`, `dmg_multiplier`, `baseattacktime`, `rangeattacktime`, `unit_class`, `unit_flags`, `dynamicflags`, `family`, `trainer_id`, `trainer_type`, `trainer_spell`, `trainer_class`, `trainer_race`, `minrangedmg`, `maxrangedmg`, `rangedattackpower`, `type`, `type_flags`, `type_flags2`, `lootid`, `pickpocketloot`, `skinloot`, `resistance1`, `resistance2`, `resistance3`, `resistance4`, `resistance5`, `resistance6`, `spell1`, `spell2`, `spell3`, `spell4`, `spell5`, `spell6`, `spell7`, `spell8`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`, `InhabitType`, `Health_mod`, `Mana_mod`, `Armor_mod`, `RacialLeader`, `questItem1`, `questItem2`, `questItem3`, `questItem4`, `questItem5`, `questItem6`, `movementId`, `RegenHealth`, `equipment_id`, `mechanic_immune_mask`, `flags_extra`, `ScriptName`, `WDBVerified`) VALUES (53752, 0, 0, 0, 0, 0, 1126, 16925, 0, 0, 'Spear of Shannox', '', '', 0, 1, 1, 0, 35, 35, 0, 1, 1.14286, 3, 0, 2, 2, 0, 24, 1, 0, 0, 1, 0, 0, 10, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1091568712, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 3, 14, 1, 1, 0, 0, 0, 0, 0, 0, 0, 164, 1, 0, 0, 0, 'npc_shannox_spear', 1);
+
 
 /*##############################
 ## Firelands Updates by Naios ##
 ##############################*/
 
-SET @SHANNOX_SCRIPT_TEXTS_ENTRY = -1999971;
-SET @SHANNOX_GUID = 15428094;
+SET @SHANNOX_SCRIPT_TEXTS_ENTRY := -1999971;
+SET @SHANNOX_GUID := 15428094;
 
 -- ### Instance Template & Access Requirement ###
 DELETE FROM `instance_template` WHERE map = 720;
@@ -26,6 +29,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_crystal_trap' WHERE `entry`=537
 
 -- Bethilac
 -- UPDATE `creature_template` SET `ScriptName`='boss_bethtilac' WHERE `entry`=52498 LIMIT 1;
+
 DELETE FROM `creature_addon` WHERE `guid` = @SHANNOX_GUID;
 INSERT INTO `creature_addon` (`guid`,`path_id`,`bytes2`) VALUES (@SHANNOX_GUID,@SHANNOX_GUID*10,1);
 
@@ -66,12 +70,17 @@ INSERT INTO `creature_addon` (`guid`,`path_id`,`bytes2`) VALUES (132313,1323130,
 
 -- ### Updates Creature_Template ###
 -- # Shannox Spear#
-
 UPDATE `creature_template` SET `scale`='3' WHERE `entry`=53752 LIMIT 1;
+-- Model id fixx for Spear of Shannox
+UPDATE `creature_template` SET `modelid1`=16925, `modelid2`=0 WHERE `entry`=53752 LIMIT 1;
 
--- Faction CHange of Crystall Trap
+-- Inserts Vehicel for Riplimb & Spear
+DELETE FROM `vehicle_template_accessory` WHERE `entry`=132313 LIMIT 1;
+INSERT INTO `vehicle_template_accessory` (`entry`, `accessory_entry`, `seat_id`, `minion`, `description`, `summontype`, `summontimer`) VALUES (53694, 53752, 1, 1, 'Riplimb Mouth (with Spear)', 8, 0);
+
+
+-- Add Taunt ImmunMask to Rageface
+UPDATE `creature_template` SET `Flags_Extra`='524288' WHERE `entry`= 53695 LIMIT 1;
+
+-- Faction Change of Crystall Trap
 UPDATE `creature_template` SET `faction_A`=14, `faction_H`=14 WHERE `entry`=53713 LIMIT 1;
-/*
-DELETE FROM `creature_template` WHERE `entry`=53752 LIMIT 1;
-INSERT INTO `creature_template` ( `entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`, `KillCredit1`, `KillCredit2`, `modelid1`, `modelid2`, `modelid3`, `modelid4`, `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`, `faction_A`, `faction_H`, `npcflag`, `speed_walk`, `speed_run`, `scale`, `rank`, `mindmg`, `maxdmg`, `dmgschool`, `attackpower`, `dmg_multiplier`, `baseattacktime`, `rangeattacktime`, `unit_class`, `unit_flags`, `dynamicflags`, `family`, `trainer_type`, `trainer_spell`, `trainer_class`, `trainer_race`, `minrangedmg`, `maxrangedmg`, `rangedattackpower`, `type`, `type_flags`, `lootid`, `pickpocketloot`, `skinloot`, `resistance1`, `resistance2`, `resistance3`, `resistance4`, `resistance5`, `resistance6`, `spell1`, `spell2`, `spell3`, `spell4`, `spell5`, `spell6`, `spell7`, `spell8`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`, `InhabitType`, `Health_mod`, `Mana_mod`, `Armor_mod`, `RacialLeader`, `questItem1`, `questItem2`, `questItem3`, `questItem4`, `questItem5`, `questItem6`, `movementId`, `RegenHealth`, `equipment_id`, `mechanic_immune_mask`, `flags_extra`, `ScriptName`, `WDBVerified`) VALUES ( 53752, 0, 0, 0, 0, 0, 16925, 0, 0, 0, "Spear of Shannox", "", "", 0, 1, 1, 0, 35, 35, 0, 1.0, 1.14286, 4.0, 0, 2, 2, 0, 24, 1.0, 0, 0, 1, 33554562, 0, 10, 0, 0, 0, 0, 2, 2, 24, 0, 1091568712, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "", 0, 3, 14.0, 1.0, 1.0, 0, 0, 0, 0, 0, 0, 0, 164, 1, 0, 0, 0, "npc_shannox_spear", "1");
-*/
