@@ -61,6 +61,8 @@ enum Data
     DATA_RHYOLITH            = 4,
     DATA_MAJORDOMUS          = 5,
     DATA_RAGNAROS            = 6,
+
+	DATA_CURRENT_ENCOUNTER_PHASE     = 7,
 };
 
 enum MovePoints
@@ -77,6 +79,16 @@ ACTION_RAGNAROS_DOWN, //end of each phase
 ACTION_RAGNAROS_UP, //start of each next phase
 ACTION_RAGNAROS_STANDUP, //only on heroic mode
 ACTION_SULFURAS_SMASH //target for smashes
+};
+
+enum Phases
+{	
+	PHASE_NON = 0, 
+
+	PHASE_SHANNOX_HAS_SPEER = 1,
+	PHASE_SPEAR_ON_THE_GROUND = 2,
+	PHASE_RIPLIMB_GOS_TO_SPEER = 3,
+	PHASE_RIPLIMB_BRINGS_SPEER = 4,
 };
 
 /*enum GameObjectsIds

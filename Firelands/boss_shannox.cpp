@@ -131,15 +131,6 @@ enum Events
 
 };
 
-enum Phases
-{	
-	PHASE_NON,
-	PHASE_HAS_SPEER,
-	PHASE_BRING_SPEER_BACK,
-	PHASE_RAGEFACING,
-};
-
-
 /*#########################
 ######### Shannox #########
 #########################*/
@@ -173,7 +164,6 @@ public:
 		bool softEnrage;
 		bool riplimbIsRespawning;
 		bool bucketListCheckPoints[5];
-		Phases phase;
 
 		void Reset()
 		{
@@ -182,7 +172,6 @@ public:
 			softEnrage = false;
 			riplimbIsRespawning = false;
 			events.Reset();
-			phase = PHASE_HAS_SPEER;
 
 			if(pRiplimb != NULL)  // Prevents Crashes
 			{
@@ -237,6 +226,8 @@ public:
 		{
 			DoZoneInCombat();
 
+			instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_SHANNOX_HAS_SPEER);
+
 			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000);
 			events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);
 			events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 20000); //TODO Find out the correct Time
@@ -286,11 +277,12 @@ public:
 					}else
 					{
 						// Throw Spear if Riplimb is Alive and Shannox has the Spear
-						if (phase == PHASE_HAS_SPEER)
+						if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SHANNOX_HAS_SPEER)
 						{
+							instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_SPEAR_ON_THE_GROUND);
 							DoCast(SPELL_HURL_SPEAR_SUMMON);
 							DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
-							phase = PHASE_NON;
+
 						}else
 							// Shifts the Event back if Shannox has not the Spear yet
 							events.RescheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
@@ -337,6 +329,10 @@ public:
 			if((pRiplimb->GetDistance2d(me) >= 70 || pRageface->GetDistance2d(me) >= 70) && (!me->HasAura(SPELL_SEPERATION_ANXIETY)))
 				DoCast(me, SPELL_SEPERATION_ANXIETY);
 
+			if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_RIPLIMB_BRINGS_SPEER && pRiplimb -> GetDistance(me) <= 1)
+			{
+				instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_SHANNOX_HAS_SPEER);
+			}
 
 			DoMeleeAttackIfReady();
 		}
@@ -455,8 +451,8 @@ public:
 				{
 					DoCast(me, SPELL_SEPERATION_ANXIETY);
 				}
-			}
 
+			}
 
 			if (!UpdateVictim())
 				return;
@@ -505,6 +501,13 @@ public:
 		InstanceScript* instance;
 		EventMap events;
 		bool frenzy;
+		bool tookSpearBack;
+		Phases phase;
+
+		void SetPhase(Phases getPhase)
+		{
+			phase = getPhase;
+		}
 
 		void Reset()
 		{
@@ -512,6 +515,7 @@ public:
 			events.Reset();
 			me->GetMotionMaster()->MoveTargetedHome();
 			frenzy = false;
+			tookSpearBack = false;
 
 			//me->GetMotionMaster()->MoveFollow(pShannox, 10, 7);
 
@@ -562,6 +566,34 @@ public:
 				{
 					DoCast(me, SPELL_SEPERATION_ANXIETY);
 				}
+
+				if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SPEAR_ON_THE_GROUND)
+				{
+					instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_RIPLIMB_GOS_TO_SPEER);
+
+					if(GetSpear() == NULL)
+						me->MonsterSay("Spear Pointer = NULL",0,0);
+
+					me->GetMotionMaster()->MovePoint(0,GetSpear()->GetPositionX(),GetSpear()->GetPositionY(),GetSpear()->GetPositionZ());
+				}
+
+				if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_RIPLIMB_GOS_TO_SPEER && GetSpear()->GetDistance(me) <= 1)
+				{
+					instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_RIPLIMB_BRINGS_SPEER);
+
+					if(GetSpear() == NULL)
+						me->MonsterSay("Spear Pointer = NULL",0,0);
+
+					tookSpearBack = true;
+
+					me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
+				}
+
+				if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SHANNOX_HAS_SPEER && tookSpearBack)
+				{
+					tookSpearBack = false;
+					me->GetMotionMaster()->MoveChase(me->getVictim());
+				}
 			}
 
 			if (!UpdateVictim())
@@ -580,6 +612,11 @@ public:
 		Creature* GetShannox()
 		{
 			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_SHANNOX));
+		}
+
+		Creature* GetSpear()
+		{
+			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_SHANNOX_SPEAR));
 		}
 	};
 };
@@ -614,14 +651,6 @@ public:
 		{
 		}
 
-		void PassengerBoarded(Unit* /*passenger*/, int8 /*seatId*/, bool /*apply*/)
-		{
-		}
-
-		void KilledUnit(Unit * /*victim*/)
-		{
-		}
-
 		void JustDied(Unit * /*victim*/)
 		{
 		}
@@ -629,15 +658,16 @@ public:
 		void EnterCombat(Unit * /*who*/)
 		{
 			me->MonsterSay("Spear Triggered",0,0);
+
 			/*
 			if (GetRiplimb() != NULL)
-				me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
-				,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),5,1);
+			me->GetMotionMaster()->MoveJump(GetRiplimb()->GetPositionX()
+			,GetRiplimb()->GetPositionY(),GetRiplimb()->GetPositionZ(),5,1);
 
 			for(int i=0;i<10;i++)
 			{
-				me->CastSpell(me->GetPositionX()+(urand(0,40)-20),me->GetPositionY()+(urand(0,40)-20),
-					46,SPELL_MAGMA_RUPTURE_VISUAL,true);
+			me->CastSpell(me->GetPositionX()+(urand(0,40)-20),me->GetPositionY()+(urand(0,40)-20),
+			46,SPELL_MAGMA_RUPTURE_VISUAL,true);
 			}
 			*/
 			DoCast(SPELL_MAGMA_FLARE);
@@ -646,6 +676,9 @@ public:
 		void UpdateAI(const uint32 diff)
 		{
 			if (!me->getVictim()) {}
+
+			if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SHANNOX_HAS_SPEER)
+				me -> DisappearAndDie();
 
 			if (!UpdateVictim())
 				return;
@@ -729,7 +762,7 @@ public:
 						me->MonsterSay("0",0,0);
 
 						if(GetRiplimb()->GetDistance(me) <= 1 && !GetRiplimb()->
-							HasAura(RAID_MODE(SPELL_WARY_10N, SPELL_WARY_25N, SPELL_WARY_10H, SPELL_WARY_25H)))
+							HasAura(RAID_MODE(SPELL_WARY_10N, SPELL_WARY_25N, SPELL_WARY_10H, SPELL_WARY_25H)) && GetRiplimb()->isAlive())
 						{
 							me->MonsterSay("1",0,0);
 							tempTarget = GetRiplimb();

@@ -41,7 +41,7 @@ public:
 		uint32 Encounter[MAX_ENCOUNTER];
 
 		// Creatures
-		//Bosses
+		// Bosses
 		uint64 uiBethilac;
 		uint64 uiRhyolith;
 		uint64 uiAlysrazar;
@@ -50,11 +50,14 @@ public:
 		uint64 uiMajordomus;
 		uint64 uiRagnaros;
 
-		//Npcs
+		// Npcs
 		uint64 uiRiplimb;
 		uint64 uiRageface;
+		uint64 uiShannoxSpear;
 
+		// Some Data
 		uint32 TeamInInstance;
+		uint32 encounterSharingPhase;
 
 		// GameObjects
 
@@ -64,16 +67,17 @@ public:
 		{
 			SetBossNumber(MAX_ENCOUNTER);
 
-			uiBethilac                     = 0;
-			uiRhyolith		             = 0;
-			uiAlysrazar		             = 0;
-			uiShannox					     = 0;
-			uiBaloroc                      = 0;
-			uiMajordomus                   = 0;
-			uiRagnaros                     = 0;
+			uiBethilac                 = 0;
+			uiRhyolith		           = 0;
+			uiAlysrazar		           = 0;
+			uiShannox				   = 0;
+			uiBaloroc                  = 0;
+			uiMajordomus               = 0;
+			uiRagnaros                 = 0;
 
-			uiRiplimb					 = 0;
-			uiRageface					 = 0;
+			uiRiplimb				   = 0;
+			uiRageface				   = 0;
+			uiShannoxSpear			   = 0;
 
 			for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
 				Encounter[i] = NOT_STARTED;
@@ -132,13 +136,15 @@ public:
 				break;
 
 				// Npcs
-				case NPC_RAGEFACE:
+			case NPC_RAGEFACE:
 				uiRageface = creature->GetGUID();
 				break;
-				case NPC_RIPLIMB:
+			case NPC_RIPLIMB:
 				uiRiplimb = creature->GetGUID();
 				break;
-
+			case NPC_SHANNOX_SPEAR:
+				uiShannoxSpear = creature->GetGUID();
+				break;
 			}
 
 		}
@@ -198,12 +204,16 @@ public:
 
 		void SetData(uint32 type, uint32 data)
 		{
-			/*switch (type)
+			switch (type)
 			{
+			case DATA_CURRENT_ENCOUNTER_PHASE:
+				encounterSharingPhase = data;
+				break;
 
 			default:
-			break;
-			}*/
+				break;
+			}
+
 		}
 
 		void SetData64(uint32 /*type*/, uint64 /*data*/)
@@ -236,6 +246,8 @@ public:
 				return uiRageface;
 			case NPC_RIPLIMB:
 				return uiRiplimb;
+			case NPC_SHANNOX_SPEAR:
+				return uiShannoxSpear;
 			}
 
 			return NULL;
@@ -243,12 +255,11 @@ public:
 
 		uint32 GetData(uint32 type)
 		{
-			/*switch (type)
+			switch (type)
 			{
-
-			default:
-			break;
-			}*/
+			case DATA_CURRENT_ENCOUNTER_PHASE:
+				return encounterSharingPhase;
+			}
 
 			return 0;
 		}
