@@ -30,15 +30,14 @@
 
 /* TODO:
 - [100% DONE] Arcing Slash (Works Perfect)
-- [75%] Insert Heroic Spells
-- Insert the Sound data
+- [100% DONE] Insert Heroic Spells
+- [25%] Insert the Sound data
 - [100% DONE] The Script Crashes sometimes (I'm not sure weather this
 is the fault of this Script or the Core)
 - [100% DONE] Add Trigger for the 'Seperation Anxietly' Spell
 - [25%] Add Trigger for the Fire Nova when the Spear is reaching the Ground
-- Add Action that Shannox throws the Spear to Riplimb
-- Add Action that Riplimb is taking the Spear back to Shannox
-- The 'Feeding Frenzy Buff' Stacks too fast
+- [75%] Add Action that Shannox throws the Spear to Riplimb
+- [75%] Add Action that Riplimb is taking the Spear back to Shannox
 - [75% DONE] Add Kristall Trap Actions
 - [75%] Add Fire Trap Actions (Damage of the Trap is missing)
 */
@@ -71,15 +70,15 @@ enum Spells
 	SPELL_HURL_SPEAR_DUMMY_SCRIPT = 100031, //Dummy Value: 99978
 	SPELL_MAGMA_RUPTURE_SHANNOX = 99840, //Causes a massive explosion of magma, dealing 47500 to 52500 Fire damage to all nearby enemies, increasing Fire damage taken by 40% for 1 min, and triggering eruptions of magma. 
 
-	SPELL_FRENZY_SHANNOX = 23537,// Increases the caster's attack speed by 50% and the Physical damage it deals by 219 to 281 for 10 min. (Spell Aura = 9204)
-	SPELL_IMMOLATION_TRAP = 52606, //Place a fire trap that will burn the first enemy to approach for <Unknown value - The spell referenced no longer exists> Fire damage over <Unknown value - The spell referenced no longer exists>.  Trap will exist for 30 sec.  Only one trap can be active at a time.(Drop Trap (181030))
+	SPELL_FRENZY_SHANNOX = 23537,
+	SPELL_IMMOLATION_TRAP = 52606,
 
 	// Riplimb
 	SPELL_LIMB_RIP = 99832,
 	SPELL_DOGGED_DETERMINATION = 101111,
 
 	// Rageface
-	SPELL_FACE_RAGE = 99947, //Pins an enemy to the ground, stunning them and tearing at their flesh to deal 38 to 42 damage every 0.5 sec for 30 sec.
+	SPELL_FACE_RAGE = 99947,
 
 	// Both Dogs
 	SPELL_FRENZIED_DEVOLUTION = 100064,
@@ -119,15 +118,16 @@ enum Events
 	//Riplimb
 	EVENT_LIMB_RIP = 7, // i Dont know...
 	EVENT_RIPLIMB_RESPAWN_H = 8,
+	EVENT_TAKING_SPEAR_DELAY = 9,
 
 	//Rageface
-	EVENT_FACE_RAGE = 9,
+	EVENT_FACE_RAGE = 10,
 
 	// Trigger for the Crystal Trap
-	EVENT_CRYSTAL_TRAP_TRIGGER = 10,
+	EVENT_CRYSTAL_TRAP_TRIGGER = 11,
 
 	// Trigger for self Dispawn (Crystal Prison)
-	EVENT_CRYSTAL_PRISON_DESPAWN = 11,
+	EVENT_CRYSTAL_PRISON_DESPAWN = 12,
 
 };
 
@@ -155,6 +155,9 @@ public:
 			pRiplimb = NULL;
 			pRageface = NULL;
 
+			softEnrage = false;
+			riplimbIsRespawning = false;
+
 			Reset();
 		}
 
@@ -164,13 +167,15 @@ public:
 		bool softEnrage;
 		bool riplimbIsRespawning;
 		bool bucketListCheckPoints[5];
+		bool hurlSpeer;
 
 		void Reset()
 		{
 			me->RemoveAllAuras();
-			me->GetMotionMaster()->MoveTargetedHome();
+			me->GetMotionMaster()->MovePath(PATH_SHANNOX,true);
 			softEnrage = false;
 			riplimbIsRespawning = false;
+			hurlSpeer = false;
 			events.Reset();
 
 			if(pRiplimb != NULL)  // Prevents Crashes
@@ -195,7 +200,7 @@ public:
 
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 
-			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);  //TODO Only for testing
+			//me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);  //TODO Only for testing
 
 			_Reset();
 		}
@@ -225,7 +230,8 @@ public:
 		void EnterCombat(Unit* who)
 		{
 			DoZoneInCombat();
-
+			me->CallForHelp(50);
+			
 			instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_SHANNOX_HAS_SPEER);
 
 			events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000);
@@ -235,8 +241,6 @@ public:
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
 			DoScriptText(SAY_AGGRO, me, who);
-
-			me->CallForHelp(50);
 
 			_EnterCombat();
 		}
@@ -250,12 +254,20 @@ public:
 			if (me->HasUnitState(UNIT_STAT_CASTING))
 				return;
 
+			if(hurlSpeer)
+			{
+				hurlSpeer = false;
+				me->CastSpell(pRiplimb->GetPositionX()+(urand(0,2000)-1000),pRiplimb->GetPositionY()+(urand(0,2000)-1000),
+				pRiplimb->GetPositionZ(),SPELL_HURL_SPEAR_SUMMON,true);
+
+			}
+
 			while (uint32 eventId = events.ExecuteEvent())
 			{
 				switch (eventId)
 				{
 				case EVENT_IMMOLTATION_TRAP:
-					DoCast(SelectTarget(SELECT_TARGET_RANDOM, 1, 60, true),SPELL_IMMOLATION_TRAP,true);
+					DoCastVictim(SPELL_IMMOLATION_TRAP,true); // Random Target or Victim?
 					events.ScheduleEvent(EVENT_IMMOLTATION_TRAP, 10000);
 					break;
 
@@ -264,7 +276,7 @@ public:
 					break;
 
 				case EVENT_ARCING_SLASH:
-					DoCast(RAID_MODE(SPELL_ARCTIC_SLASH_10N, SPELL_ARCTIC_SLASH_25N,
+					DoCastVictim(RAID_MODE(SPELL_ARCTIC_SLASH_10N, SPELL_ARCTIC_SLASH_25N,
 						SPELL_ARCTIC_SLASH_10H, SPELL_ARCTIC_SLASH_25H));
 					events.ScheduleEvent(EVENT_ARCING_SLASH, 12000);
 					break;
@@ -273,20 +285,33 @@ public:
 
 					if(pRiplimb->isDead())
 					{ // Cast Magma Rupture when Ripclimb is Death
-						DoCast(SPELL_MAGMA_RUPTURE_SHANNOX);
+						DoCastVictim(SPELL_MAGMA_RUPTURE_SHANNOX);
+						events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 42000);
 					}else
 					{
 						// Throw Spear if Riplimb is Alive and Shannox has the Spear
 						if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SHANNOX_HAS_SPEER)
 						{
+							events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 42000);
 							instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_SPEAR_ON_THE_GROUND);
-							DoCast(SPELL_HURL_SPEAR_SUMMON);
-							DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
+					
+							hurlSpeer = true;
+
+							DoCast(pRiplimb,SPELL_HURL_SPEAR);
 
 						}else
 							// Shifts the Event back if Shannox has not the Spear yet
-							events.RescheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
+							events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
 					}
+
+					break;
+
+				case EVENT_SUMMON_SPEAR:
+					
+						me->CastSpell(pRiplimb->GetPositionX()+(urand(0,2000)-1000),pRiplimb->GetPositionY()+(urand(0,2000)-1000),
+						pRiplimb->GetPositionZ(),SPELL_HURL_SPEAR_SUMMON,true);
+
+						//DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
 
 					break;
 
@@ -376,10 +401,10 @@ public:
 			events.Reset();
 			frenzy = false;
 			shallTarget = NULL;
-			phase = PHASE_NON;
 
-			me->GetMotionMaster()->MoveTargetedHome();
-			//me->GetMotionMaster()->MoveFollow(pShannox, 5, 5);
+			//me->GetMotionMaster()->MoveTargetedHome();
+			if(GetShannox() != NULL)
+				me->GetMotionMaster()->MoveFollow(GetShannox(), 10, 0);
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -392,7 +417,11 @@ public:
 
 		void EnterCombat(Unit * /*who*/)
 		{
-			//me->GetMotionMaster()->MoveIdle();
+			DoZoneInCombat();
+			me->CallForHelp(50);
+			
+			me->GetMotionMaster()->MoveChase(me->getVictim());
+
 			//events.ScheduleEvent(EVENT_FACE_RAGE, 15000); //TODO Find out the correct Time
 		}
 
@@ -412,7 +441,7 @@ public:
 			if (damage >= 1/* && me->HasAura(BUFF_FACE_RAGE)*/)
 			{	
 				me->MonsterSay("Triggered",0,0);
-				me->RemoveAurasDueToSpell(SPELL_FACE_RAGE);
+				me->RemoveAura(SPELL_FACE_RAGE);
 				me->getVictim()->ClearUnitState(UNIT_STAT_STUNNED);
 				me->SetTarget(me->Attack(SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true),true));
 				//events.ScheduleEvent(EVENT_FACE_RAGE, 15000); //TODO Find out the correct Time
@@ -430,7 +459,7 @@ public:
 				switch (eventId)
 				{
 				case EVENT_FACE_RAGE:
-					//DoCastVictim(SPELL_FACE_RAGE);
+					DoCastVictim(SPELL_FACE_RAGE);
 					//me->getVictim()->SetFlag(UNIT_FIELD_FLAGS,  UNIT_STAT_STUNNED);
 					//me->getVictim()->AddUnitState(UNIT_STAT_STUNNED);
 					break;
@@ -501,13 +530,7 @@ public:
 		InstanceScript* instance;
 		EventMap events;
 		bool frenzy;
-		bool tookSpearBack;
-		Phases phase;
-
-		void SetPhase(Phases getPhase)
-		{
-			phase = getPhase;
-		}
+		bool movementResetNeeded;
 
 		void Reset()
 		{
@@ -515,9 +538,10 @@ public:
 			events.Reset();
 			me->GetMotionMaster()->MoveTargetedHome();
 			frenzy = false;
-			tookSpearBack = false;
+			movementResetNeeded = false;
 
-			//me->GetMotionMaster()->MoveFollow(pShannox, 10, 7);
+			if(GetShannox() != NULL)
+			me->GetMotionMaster()->MoveFollow(GetShannox(), 13, 0);
 
 			//me->SetReactState(REACT_PASSIVE); //TODO Only for testing
 		}
@@ -532,6 +556,11 @@ public:
 
 		void EnterCombat(Unit * who)
 		{	
+			DoZoneInCombat();
+			me->CallForHelp(50);
+			
+			me->GetMotionMaster()->MoveChase(me->getVictim());
+
 			events.ScheduleEvent(EVENT_LIMB_RIP, 12000); //TODO Find out the correct Time
 		}
 
@@ -548,6 +577,9 @@ public:
 				case EVENT_LIMB_RIP:
 					DoCastVictim(SPELL_LIMB_RIP);	
 					events.ScheduleEvent(EVENT_LIMB_RIP, 12000); //TODO Find out the correct Time
+					break;
+				case EVENT_TAKING_SPEAR_DELAY:
+					me->GetMotionMaster()->MovePoint(0,GetSpear()->GetPositionX(),GetSpear()->GetPositionY(),GetSpear()->GetPositionZ());
 					break;
 				default:
 					break;
@@ -570,28 +602,23 @@ public:
 				if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SPEAR_ON_THE_GROUND)
 				{
 					instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_RIPLIMB_GOS_TO_SPEER);
-
-					if(GetSpear() == NULL)
-						me->MonsterSay("Spear Pointer = NULL",0,0);
-
-					me->GetMotionMaster()->MovePoint(0,GetSpear()->GetPositionX(),GetSpear()->GetPositionY(),GetSpear()->GetPositionZ());
+					events.ScheduleEvent(EVENT_TAKING_SPEAR_DELAY, 3500);
 				}
 
 				if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_RIPLIMB_GOS_TO_SPEER && GetSpear()->GetDistance(me) <= 1)
 				{
 					instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_RIPLIMB_BRINGS_SPEER);
 
-					if(GetSpear() == NULL)
-						me->MonsterSay("Spear Pointer = NULL",0,0);
-
-					tookSpearBack = true;
-
+					movementResetNeeded = true;
+					DoCast(me, SPELL_DOGGED_DETERMINATION);
 					me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
 				}
 
-				if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SHANNOX_HAS_SPEER && tookSpearBack)
+				if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SHANNOX_HAS_SPEER && movementResetNeeded)
 				{
-					tookSpearBack = false;
+					movementResetNeeded = false;
+					me->MonsterSay("Should Reset",0,0);
+					me->RemoveAura(SPELL_DOGGED_DETERMINATION);
 					me->GetMotionMaster()->MoveChase(me->getVictim());
 				}
 			}
@@ -753,26 +780,30 @@ public:
 				switch (eventId)
 				{
 				case EVENT_CRYSTAL_TRAP_TRIGGER:
-					me->MonsterSay("Trap Event Triggered",0,0);
+					// me->MonsterSay("Trap Event Triggered",0,0);
 
 					// Riplimb has a higher Priority than Players...
 
 					if(GetRiplimb() != NULL)
 					{
-						me->MonsterSay("0",0,0);
+						//me->MonsterSay("0",0,0);
 
 						if(GetRiplimb()->GetDistance(me) <= 1 && !GetRiplimb()->
 							HasAura(RAID_MODE(SPELL_WARY_10N, SPELL_WARY_25N, SPELL_WARY_10H, SPELL_WARY_25H)) && GetRiplimb()->isAlive())
 						{
-							me->MonsterSay("1",0,0);
+							//me->MonsterSay("1",0,0);
 							tempTarget = GetRiplimb();
+
+							// Cast Spell Wary on Ripclimb
+							DoCast(tempTarget,RAID_MODE(SPELL_WARY_10N, SPELL_WARY_25N, SPELL_WARY_10H, SPELL_WARY_25H), true);
+
 						}else
 						{
 							if (SelectTarget(SELECT_TARGET_NEAREST, 0, 2, true) != NULL)
 							{ 
 								if (SelectTarget(SELECT_TARGET_NEAREST, 0, 2, true)->GetDistance(me) <= 2)
 								{ 
-									me->MonsterSay("2",0,0);
+									//me->MonsterSay("2",0,0);
 									tempTarget = SelectTarget(SELECT_TARGET_NEAREST, 0, 2, true);
 								}
 							}
@@ -780,13 +811,13 @@ public:
 					}
 					if (tempTarget == NULL) // If no Target exists try to get a new Target in 0,5s
 					{
-						me->MonsterSay("3",0,0);
+						//me->MonsterSay("3",0,0);
 						events.ScheduleEvent(EVENT_CRYSTAL_TRAP_TRIGGER, 500);
 					}else
 					{ // Intialize Prison if tempTarget was set
-						me->MonsterSay("4",0,0);
+						//me->MonsterSay("4",0,0);
 						myPrison = me->SummonCreature(NPC_CRYSTAL_PRISON,me->GetPositionX()
-							,me->GetPositionY(),me->GetPositionZ(),0, TEMPSUMMON_CORPSE_DESPAWN);
+							,me->GetPositionY(),me->GetPositionZ(),0, TEMPSUMMON_MANUAL_DESPAWN);
 						myPrison->SetReactState(REACT_PASSIVE);
 						DoCast(tempTarget,CRYSTAL_PRISON_EFFECT);
 						events.ScheduleEvent(EVENT_CRYSTAL_PRISON_DESPAWN, 15000);
@@ -796,7 +827,7 @@ public:
 
 				case EVENT_CRYSTAL_PRISON_DESPAWN:
 
-					myPrison -> DisappearAndDie();
+					myPrison -> DespawnOrUnsummon();
 					tempTarget -> RemoveAurasDueToSpell(CRYSTAL_PRISON_EFFECT);
 					me->DisappearAndDie();
 
@@ -811,7 +842,7 @@ public:
 			{
 				if(myPrison->isDead())
 				{
-					myPrison -> DisappearAndDie();
+					myPrison -> DespawnOrUnsummon();
 					tempTarget -> RemoveAurasDueToSpell(CRYSTAL_PRISON_EFFECT);
 					me->DisappearAndDie();
 				}	
@@ -831,7 +862,7 @@ public:
 /*#########################
 ###### Crystal Prison #####
 #########################*/
-
+/*
 class npc_crystal_prison : public CreatureScript
 {
 public:
@@ -857,7 +888,7 @@ public:
 		{
 		}
 
-		void EnterCombat(Unit * /*who*/)
+		void EnterCombat(Unit * who)
 		{
 
 		}
@@ -868,7 +899,7 @@ public:
 		}
 	};
 };
-
+*/
 /*#########################
 ####### Achievements ######
 #########################*/

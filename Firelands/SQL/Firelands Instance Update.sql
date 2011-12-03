@@ -4,6 +4,7 @@
 ##############################*/
 
 SET @SHANNOX_SCRIPT_TEXTS_ENTRY = -1999971;
+SET @SHANNOX_GUID = 15428094;
 
 -- ### Instance Template & Access Requirement ###
 DELETE FROM `instance_template` WHERE map = 720;
@@ -26,6 +27,20 @@ UPDATE `creature_template` SET `ScriptName`='npc_crystal_prison' WHERE `entry`=5
 
 -- Bethilac
 -- UPDATE `creature_template` SET `ScriptName`='boss_bethtilac' WHERE `entry`=52498 LIMIT 1;
+DELETE FROM `creature_addon` WHERE `guid` = @SHANNOX_GUID;
+INSERT INTO `creature_addon` (`guid`,`path_id`,`bytes2`) VALUES (@SHANNOX_GUID,@SHANNOX_GUID*10,1);
+
+DELETE FROM `creature` WHERE `guid` = @SHANNOX_GUID LIMIT 1;
+INSERT INTO `creature` (`guid`, `id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`) VALUES (@SHANNOX_GUID, 53691, 720, 8, 1, 0, 0, -235.162, 30.6066, 47.5364, 1.50341, 300, 0, 0, 24316892, 0, 0, 0, 0, 0);
+
+DELETE FROM `waypoint_data` WHERE `id`= @SHANNOX_GUID*10;
+
+INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `delay`, `move_flag`, `action`, `action_chance`, `wpguid`) VALUES (@SHANNOX_GUID*10, 1, -235.162, 98.8611, 47.5364, 0, 0, 0, 100, 0);
+INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `delay`, `move_flag`, `action`, `action_chance`, `wpguid`) VALUES (@SHANNOX_GUID*10, 2, -278.764, 74.4588, 46.1583, 0, 0, 0, 100, 0);
+INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `delay`, `move_flag`, `action`, `action_chance`, `wpguid`) VALUES (@SHANNOX_GUID*10, 3, -317.509, 67.5979, 46.1583, 0, 0, 0, 100, 0);
+INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `delay`, `move_flag`, `action`, `action_chance`, `wpguid`) VALUES (@SHANNOX_GUID*10, 4, -284.285, 74.2973, 46.1583, 0, 0, 0, 100, 0);
+INSERT INTO `waypoint_data` (`id`, `point`, `position_x`, `position_y`, `position_z`, `delay`, `move_flag`, `action`, `action_chance`, `wpguid`) VALUES (@SHANNOX_GUID*10, 5, -240.858, 97.7591, 47.4194, 0, 0, 0, 100, 0);
+
 
 -- ### Set Script_Texts ###
 -- # Shannox #
@@ -41,6 +56,14 @@ INSERT INTO `script_texts` (`npc_entry`, `entry`, `content_default`, `content_lo
 
 DELETE FROM `script_texts` WHERE `entry` = @SHANNOX_SCRIPT_TEXTS_ENTRY-3 and npc_entry = 53691;
 INSERT INTO `script_texts` (`npc_entry`, `entry`, `content_default`, `content_loc1`, `content_loc2`, `content_loc3`, `content_loc4`, `content_loc5`, `content_loc6`, `content_loc7`, `content_loc8`, `sound`, `type`, `language`, `emote`, `comment`) VALUES (53691, @SHANNOX_SCRIPT_TEXTS_ENTRY-3, 'Ohh... the pain   Lord of Fire. It hurts...', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 24517, 0, 0, 0, 'Shannox Dead Yell');
+
+-- ### Waypoints ###
+-- # Shannox#
+
+-- !!!! Still Experimental!!!!
+
+DELETE FROM `creature_addon` WHERE `guid`=132313;
+INSERT INTO `creature_addon` (`guid`,`path_id`,`bytes2`) VALUES (132313,1323130,1);
 
 -- ### Updates Creature_Template ###
 -- # Shannox Spear#

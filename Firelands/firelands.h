@@ -91,9 +91,9 @@ enum Phases
 	PHASE_RIPLIMB_BRINGS_SPEER = 4,
 };
 
-/*enum GameObjectsIds
+enum Misc
 {
-    0,
-};*/
+	PATH_SHANNOX = 154280940,
+};
 
 #endif
