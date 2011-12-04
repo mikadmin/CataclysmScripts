@@ -20,26 +20,26 @@
 */
 
 /*###########################
+#                           #
 #      Developer Info:      #
 #   Script Coded by Naios   #
 #                           #
-#   Script Complete: 72%    #
+#   Script Complete: 80%    #
 #  Works with Trillium EMU  #
-#     & Strawberry Core     #
+#                           #
 ###########################*/
 
 /* TODO:
 - [100% DONE] Arcing Slash (Works Perfect)
 - [100% DONE] Insert Heroic Spells
 - [25%] Insert the Sound data
-- [100% DONE] The Script Crashes sometimes (I'm not sure weather this
-is the fault of this Script or the Core)
 - [100% DONE] Add Trigger for the 'Seperation Anxietly' Spell
-- [25%] Add Trigger for the Fire Nova when the Spear is reaching the Ground
+- [50%] Add Trigger for the Fire Nova when the Spear is reaching the Ground
 - [75%] Add Action that Shannox throws the Spear to Riplimb (Location Correct?)
 - [75%] Add Action that Riplimb is taking the Spear back to Shannox
 - [75% DONE] Add Kristall Trap Actions (Stun for Players Missing... Opcode Problem?)
 - [75%] Add Fire Trap Actions (Damage of the Trap is missing)
+- [25%] Achievements
 */
 
 #include "ScriptPCH.h"
