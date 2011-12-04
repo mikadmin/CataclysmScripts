@@ -24,17 +24,17 @@
 #      Developer Info:      #
 #   Script Coded by Naios   #
 #                           #
-#   Script Complete: 80%    #
+#   Script Complete: ~80%   #
 #  Works with Trillium EMU  #
 #                           #
 ###########################*/
 
 /* TODO:
-- [100% DONE] Arcing Slash (Works Perfect)
+- [100% DONE] Arcing Slash (works Perfect)
 - [100% DONE] Insert Heroic Spells
 - [25%] Insert the Sound data
 - [100% DONE] Add Trigger for the 'Seperation Anxietly' Spell
-- [50%] Add Trigger for the Fire Nova when the Spear is reaching the Ground
+- [75%] Add Trigger for the Fire Nova when the Spear is reaching the Ground (Algorythm tho Draw a Circle not working)
 - [75%] Add Action that Shannox throws the Spear to Riplimb (Location Correct?)
 - [75%] Add Action that Riplimb is taking the Spear back to Shannox
 - [75% DONE] Add Kristall Trap Actions (Stun for Players Missing... Opcode Problem?)
@@ -128,6 +128,12 @@ enum Events
 
 };
 
+Position const bucketListPositions[5] =  {{0.0f,0.0f,0.0f,0.0f},
+										  {0.0f,0.0f,0.0f,0.0f},
+										  {0.0f,0.0f,0.0f,0.0f},
+										  {0.0f,0.0f,0.0f,0.0f},
+										  {0.0f,0.0f,0.0f,0.0f}};
+
 // Dogs Walking Distance to Shannox
 const float walkRagefaceDistance = 8;
 const float walkRagefaceAngle = 7;
@@ -137,6 +143,9 @@ const float walkRiplimbAngle = 6;
 
 // Damage needed that Rageface changes his Target
 const int damageNeededThatRagefaceChangesTarget = 45000; // Blizzlike
+
+// If the Distance between Shannox & Dogs > This Value, all 3 get the Seperation Buff
+const float maxDistanceBetweenShannoxAndDogs = 70;
 
 /*#########################
 ######### Shannox #########
@@ -175,7 +184,7 @@ public:
 		bool riplimbIsRespawning;
 		bool bucketListCheckPoints[5];
 		bool hurlSpeer;
-
+				
 		void DespawnCreatures(uint32 entry, float distance)
 		{
 			std::list<Creature*> creatures;
@@ -190,6 +199,7 @@ public:
 
 		void Reset()
 		{
+			instance->SetBossState(DATA_SHANNOX, NOT_STARTED);
 			me->RemoveAllAuras();
 			me->GetMotionMaster()->MovePath(PATH_SHANNOX,true);
 			softEnrage = false;
@@ -234,6 +244,10 @@ public:
 				summon->AI()->DoZoneInCombat();
 		}
 
+		void JustReachedHome()
+		{
+			instance->SetBossState(DATA_SHANNOX, FAIL);
+		}
 		void KilledUnit(Unit * /*victim*/)
 		{
 		}
@@ -241,6 +255,8 @@ public:
 		void JustDied(Unit * /*victim*/)
 		{
 			DoScriptText(SAY_ON_DEAD, me);
+
+			instance->SetBossState(DATA_SHANNOX, DONE);
 
 			summons.DespawnAll();
 			
@@ -257,6 +273,8 @@ public:
 		
 			DoZoneInCombat();
 			me->CallForHelp(50);
+
+			instance->SetBossState(DATA_SHANNOX, IN_PROGRESS);
 
 			instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_SHANNOX_HAS_SPEER);
 
@@ -381,7 +399,7 @@ public:
 				softEnrage = true;
 			}
 
-			if((pRiplimb->GetDistance2d(me) >= 70 || pRageface->GetDistance2d(me) >= 70) && (!me->HasAura(SPELL_SEPERATION_ANXIETY)))
+			if((pRiplimb->GetDistance2d(me) >= maxDistanceBetweenShannoxAndDogs || pRageface->GetDistance2d(me) >= maxDistanceBetweenShannoxAndDogs) && (!me->HasAura(SPELL_SEPERATION_ANXIETY)))
 				DoCast(me, SPELL_SEPERATION_ANXIETY);
 
 			if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_RIPLIMB_BRINGS_SPEER && pRiplimb -> GetDistance(me) <= 1)
@@ -511,7 +529,7 @@ public:
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 				}
 
-				if(GetShannox()->GetDistance2d(me) >= 70 && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
+				if(GetShannox()->GetDistance2d(me) >= maxDistanceBetweenShannoxAndDogs && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
 				{
 					DoCast(me, SPELL_SEPERATION_ANXIETY);
 				}
@@ -566,14 +584,16 @@ public:
 		EventMap events;
 		bool frenzy;
 		bool movementResetNeeded;
+		bool inTakingSpearPhase;
 		Vehicle* vehicle;
 
 		void Reset()
 		{
 			me->RemoveAllAuras();
 			events.Reset();
-			frenzy = false;
-			movementResetNeeded = false;
+			frenzy = false; // Is needed, that Frenzy is not casted twice on Riplimb
+			movementResetNeeded = false; // Is needed for correct execution of the Phases
+			inTakingSpearPhase = false; // Is needed for correct execution of the Phases
 
 			if(GetShannox() != NULL)
 				me->GetMotionMaster()->MoveFollow(GetShannox(), walkRiplimbDistance, walkRiplimbAngle);
@@ -615,6 +635,8 @@ public:
 					events.ScheduleEvent(EVENT_LIMB_RIP, 12000); //TODO Find out the correct Time
 					break;
 				case EVENT_TAKING_SPEAR_DELAY:
+					inTakingSpearPhase = false;
+					instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_RIPLIMB_GOS_TO_SPEER);
 					me->GetMotionMaster()->MovePoint(0,GetSpear()->GetPositionX(),GetSpear()->GetPositionY(),GetSpear()->GetPositionZ());
 					break;
 				default:
@@ -630,15 +652,15 @@ public:
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
 				}
 
-				if(GetShannox()->GetDistance2d(me) >= 70 && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
+				if(GetShannox()->GetDistance2d(me) >= maxDistanceBetweenShannoxAndDogs && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
 				{
 					DoCast(me, SPELL_SEPERATION_ANXIETY);
 				}
 				if(!me->HasAura(SPELL_WARY_10N))
 				{
-					if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SPEAR_ON_THE_GROUND)
+					if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SPEAR_ON_THE_GROUND && (!inTakingSpearPhase))
 					{
-						instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_RIPLIMB_GOS_TO_SPEER);
+						inTakingSpearPhase = true;
 						events.ScheduleEvent(EVENT_TAKING_SPEAR_DELAY, 3500);
 					}
 
@@ -836,6 +858,7 @@ public:
 		void EnterCombat(Unit * /*who*/)
 		{
 			events.ScheduleEvent(EVENT_CRYSTAL_TRAP_TRIGGER, 4000);
+			me->SetReactState(REACT_PASSIVE);
 		}
 
 		void UpdateAI(const uint32 diff)
