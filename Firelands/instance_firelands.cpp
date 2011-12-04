@@ -55,6 +55,9 @@ public:
 		uint64 uiRageface;
 		uint64 uiShannoxSpear;
 
+		// Gameobjects
+		uint64 uiBethilacDoor;
+
 		// Some Data
 		uint32 TeamInInstance;
 		uint32 encounterSharingPhase;
@@ -78,6 +81,8 @@ public:
 			uiRiplimb				   = 0;
 			uiRageface				   = 0;
 			uiShannoxSpear			   = 0;
+
+			uiBethilacDoor			   = 0;
 
 			for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
 				Encounter[i] = NOT_STARTED;
@@ -151,6 +156,13 @@ public:
 
 		void OnGameObjectCreate(GameObject* gameObject)
 		{
+			switch (gameObject->GetEntry())
+			{
+				case GOB_DOOR_BETHILAC:
+					uiBethilacDoor = gameObject->GetGUID();
+					HandleGameObject(uiBethilacDoor,true);
+				break;
+			}
 		}
 
 		void OnGameObjectRemove(GameObject* gameObject)
@@ -162,7 +174,6 @@ public:
 			switch (creature->GetEntry())
 			{
 			case NPC_BETHTILAC:
-				//SetBossState();
 				break;
 			case NPC_RHYOLITH:
 			case NPC_ALYSRAZAR:
@@ -180,24 +191,25 @@ public:
 			if (!InstanceScript::SetBossState(type, state))
 				return false;
 
-			/*switch (type)
+			switch (type)
 			{
-			case BOSS_BETHTILAC:
+			case DATA_BETHTILAC:
+				HandleGameObject(uiBethilacDoor, state != IN_PROGRESS);			
+				break;
+			case DATA_RHYOLITH:
 			break;
-			case BOSS_RHYOLITH:
+			case DATA_ALYSRAZAR:
 			break;
-			case BOSS_ALYSRAZAR:
+			case DATA_SHANNOX:
 			break;
-			case BOSS_SHANNOX:
+			case DATA_BALOROC:
 			break;
-			case BOSS_BALOROC:
+			case DATA_MAJORDOMUS:
 			break;
-			case BOSS_MAJORDOMUS:
-			break;
-			case BOSS_RAGNAROS:
+			case DATA_RAGNAROS:
 			break;
 
-			}*/
+			}
 
 			return true;
 		}

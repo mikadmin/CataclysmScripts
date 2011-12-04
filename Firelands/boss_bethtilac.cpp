@@ -59,6 +59,9 @@ enum Events
 
 };
 
+const float groundLow = 74.042;
+const float groundUp = 111.767;
+
 class boss_bethtilac : public CreatureScript
 {
 public:
@@ -81,7 +84,7 @@ public:
 		void Reset()
 		{
 			events.Reset();
-
+			instance->SetBossState(DATA_BETHTILAC, NOT_STARTED);
 			me->GetMotionMaster()->MoveTargetedHome();
 		}
 
@@ -95,15 +98,25 @@ public:
 		{
 		}
 
+		void JustReachedHome()
+		{
+			instance->SetBossState(DATA_BETHTILAC, FAIL);
+		}
+
 		void JustDied(Unit * /*victim*/)
 		{
-
+			instance->SetBossState(DATA_BETHTILAC, DONE);
 			DoScriptText(SAY_ON_DEAD, me);
 			_JustDied();
 		}
 
 		void EnterCombat(Unit* who)
 		{
+			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
+			
+			me->GetMotionMaster()->MovePoint(0, me->GetPositionX(),me->GetPositionY(), groundUp);
+
+			instance->SetBossState(DATA_BETHTILAC, IN_PROGRESS);
 
 			_EnterCombat();
 		}

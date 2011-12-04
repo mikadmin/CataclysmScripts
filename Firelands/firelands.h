@@ -51,6 +51,11 @@ NPC_CRYSTAL_PRISON = 53819,
 
 };
 
+enum gameobjectIDs
+{
+	GOB_DOOR_BETHILAC = 208877,
+};
+
 enum Data
 {
 	// Encounter States
