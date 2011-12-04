@@ -8,7 +8,7 @@
 	- The Waypoints are NOT sniffed but they are looking very similar
 	
 	- The Text_Scripts are NOT sniffed (they were copied out of a video)
-	
+
 */
 
 SET @SHANNOX_SCRIPT_TEXTS_ENTRY := -1999971;
