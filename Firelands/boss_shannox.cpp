@@ -129,11 +129,14 @@ enum Events
 };
 
 // Dogs Walking Distance to Shannox
-const float walkRagefaceDistance = 7;
-const float walkRagefaceAngle = 10;
+const float walkRagefaceDistance = 8;
+const float walkRagefaceAngle = 7;
 
-const float walkRiplimbDistance = 8;
-const float walkRiplimbAngle = 7;
+const float walkRiplimbDistance = 9;
+const float walkRiplimbAngle = 6;
+
+// Damage needed that Rageface changes his Target
+const int damageNeededThatRagefaceChangesTarget = 45000; // Blizzlike
 
 /*#########################
 ######### Shannox #########
@@ -251,6 +254,7 @@ public:
 
 		void EnterCombat(Unit* who)
 		{
+		
 			DoZoneInCombat();
 			me->CallForHelp(50);
 
@@ -263,6 +267,10 @@ public:
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
 			DoScriptText(SAY_AGGRO, me, who);
+
+			// Sets the current Position as Home Position prevents that Shannox is running through the Instance
+			me->SetHomePosition(me->GetPositionX(),me->GetPositionY(),me->GetPositionZ(),me->GetOrientation());
+
 
 			_EnterCombat();
 		}
@@ -279,7 +287,7 @@ public:
 			if(hurlSpeer)
 			{
 				hurlSpeer = false;
-				me->CastSpell(pRiplimb->GetPositionX()+(urand(0,2000)-1000),pRiplimb->GetPositionY()+(urand(0,2000)-1000),
+				me->CastSpell(pRiplimb->GetPositionX()+urand(0,500),pRiplimb->GetPositionY()+urand(0,500),
 					pRiplimb->GetPositionZ(),SPELL_HURL_SPEAR_SUMMON,true);
 				instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_SPEAR_ON_THE_GROUND);
 
@@ -339,7 +347,7 @@ public:
 
 				case EVENT_SUMMON_CRYSTAL_PRISON:
 					if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500, true))
-						pRiplimb = me->SummonCreature(NPC_CRYSTAL_TRAP, tempTarget->GetPositionX()
+						me->SummonCreature(NPC_CRYSTAL_TRAP, tempTarget->GetPositionX()
 						,tempTarget->GetPositionY(),tempTarget->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
 					events.ScheduleEvent(EVENT_SUMMON_CRYSTAL_PRISON, 25000);
 					break;
@@ -454,15 +462,13 @@ public:
 
 		void DamageTaken(Unit* who, uint32& damage)
 		{
-			me->MonsterSay("Damage incoming",0,0);
-			if (damage >= 1/* && me->HasAura(BUFF_FACE_RAGE)*/)
+
+			if (damage >= damageNeededThatRagefaceChangesTarget /* && me->HasAura(BUFF_FACE_RAGE)*/)
 			{	
 				me->RemoveAura(SPELL_FACE_RAGE);
 				me->getVictim()->ClearUnitState(UNIT_STAT_STUNNED);
-				me->SetTarget(me->Attack(SelectTarget(SELECT_TARGET_RANDOM, 1, 500, true),true));
-				events.ScheduleEvent(EVENT_FACE_RAGE, 31000);
-
-				me->MonsterSay("Damage Triggered",0,0);
+				me->getVictim()->RemoveAurasDueToSpell(SPELL_FACE_RAGE);
+				SelectNewTarget();
 			}
 		}
 
@@ -485,6 +491,7 @@ public:
 				{
 				case EVENT_FACE_RAGE:
 					DoCastVictim(SPELL_FACE_RAGE);
+					events.ScheduleEvent(EVENT_FACE_RAGE, 31000);
 
 					// Is this neeeded?
 					//me->getVictim()->SetFlag(UNIT_FIELD_FLAGS,  UNIT_STAT_STUNNED);
