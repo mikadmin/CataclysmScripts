@@ -7,12 +7,16 @@
 	
 	- The Waypoints are NOT sniffed but they are looking very similar
 	
-	- The Text_Scripts are NOT sniffed (they were copied out of a video)
+	- The Text_Scripts are Blizzlike
+	
+	- Shannox Weapon is Blizzlike
 
 */
 
+-- This Values needs to be set...
 SET @SHANNOX_SCRIPT_TEXTS_ENTRY := -1999971;
 SET @SHANNOX_GUID := 15428094;
+SET @SHANNOX_EUIPMENT_TEMPLATE := 53000;
 
 -- ### Instance Template & Access Requirement ###
 DELETE FROM `instance_template` WHERE map = 720;
@@ -34,8 +38,18 @@ UPDATE `creature_template` SET `ScriptName`='npc_crystal_trap' WHERE `entry`=537
 DELETE FROM `creature_addon` WHERE `guid` = @SHANNOX_GUID;
 INSERT INTO `creature_addon` (`guid`,`path_id`,`bytes2`) VALUES (@SHANNOX_GUID,@SHANNOX_GUID*10,1);
 
-DELETE FROM `creature` WHERE `guid` = @SHANNOX_GUID LIMIT 1;
-INSERT INTO `creature` (`guid`, `id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`) VALUES (@SHANNOX_GUID, 53691, 720, 8, 1, 0, 0, -235.162, 30.6066, 47.5364, 1.50341, 300, 0, 0, 24316892, 0, 0, 0, 0, 0);
+-- # Spawns #
+
+DELETE FROM `creature` WHERE `id` = 53691 LIMIT 4;
+
+-- 10N
+INSERT INTO `creature` (`guid`, `id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`) VALUES (@SHANNOX_GUID, 53691, 720, 1, 1, 0, @SHANNOX_EUIPMENT_TEMPLATE, -241.456, 103.116, 47.8124, 1.50341, 300, 0, 0, 24316892, 0, 2, 0, 0, 0);
+-- 25N
+INSERT INTO `creature` (`guid`, `id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`) VALUES (@SHANNOX_GUID+1, 53691, 720, 2, 1, 0, @SHANNOX_EUIPMENT_TEMPLATE, -241.456, 103.116, 47.8124, 1.50341, 300, 0, 0, 24316892, 0, 2, 0, 0, 0);
+-- 10H
+INSERT INTO `creature` (`guid`, `id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`) VALUES (@SHANNOX_GUID+2, 53691, 720, 4, 1, 0, @SHANNOX_EUIPMENT_TEMPLATE, -241.456, 103.116, 47.8124, 1.50341, 300, 0, 0, 24316892, 0, 2, 0, 0, 0);
+-- 25H
+INSERT INTO `creature` (`guid`, `id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`) VALUES (@SHANNOX_GUID+3, 53691, 720, 8, 1, 0, @SHANNOX_EUIPMENT_TEMPLATE, -241.456, 103.116, 47.8124, 1.50341, 300, 0, 0, 24316892, 0, 2, 0, 0, 0);
 
 -- ### Set Waypoints ###
 
@@ -86,7 +100,7 @@ DELETE FROM `script_texts` WHERE `entry` = @SHANNOX_SCRIPT_TEXTS_ENTRY-2 and npc
 INSERT INTO `script_texts` (`npc_entry`, `entry`, `content_default`, `content_loc1`, `content_loc2`, `content_loc3`, `content_loc4`, `content_loc5`, `content_loc6`, `content_loc7`, `content_loc8`, `sound`, `type`, `language`, `emote`, `comment`) VALUES (53691, @SHANNOX_SCRIPT_TEXTS_ENTRY-2, 'Oh, you murders! Why? Why would you kill such a nobie animal?', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 24517, 0, 0, 0, 'Shannox Yell on killing a Dog');
 
 DELETE FROM `script_texts` WHERE `entry` = @SHANNOX_SCRIPT_TEXTS_ENTRY-3 and npc_entry = 53691;
-INSERT INTO `script_texts` (`npc_entry`, `entry`, `content_default`, `content_loc1`, `content_loc2`, `content_loc3`, `content_loc4`, `content_loc5`, `content_loc6`, `content_loc7`, `content_loc8`, `sound`, `type`, `language`, `emote`, `comment`) VALUES (53691, @SHANNOX_SCRIPT_TEXTS_ENTRY-3, 'Ohh... the pain   Lord of Fire. It hurts...', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 24517, 0, 0, 0, 'Shannox Dead Yell');
+INSERT INTO `script_texts` (`npc_entry`, `entry`, `content_default`, `content_loc1`, `content_loc2`, `content_loc3`, `content_loc4`, `content_loc5`, `content_loc6`, `content_loc7`, `content_loc8`, `sound`, `type`, `language`, `emote`, `comment`) VALUES (53691, @SHANNOX_SCRIPT_TEXTS_ENTRY-3, 'Ohh... the pain  Lord of Fire. It hurts...', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 24517, 0, 0, 0, 'Shannox Dead Yell');
 
 DELETE FROM `creature_addon` WHERE `guid`= @SHANNOX_GUID;
 INSERT INTO `creature_addon` (`guid`,`path_id`,`bytes2`) VALUES (@SHANNOX_GUID,@SHANNOX_GUID*10,1);
@@ -94,16 +108,20 @@ INSERT INTO `creature_addon` (`guid`,`path_id`,`bytes2`) VALUES (@SHANNOX_GUID,@
 -- ### Updates Creature_Template ###
 -- # Shannox Spear#
 UPDATE `creature_template` SET `scale`='3' WHERE `entry`=53752 LIMIT 1;
--- Model id fixx for Spear of Shannox
+
+-- Model id fixx & equipment Template for Spear of Shannox
 UPDATE `creature_template` SET `modelid1`=16925, `modelid2`=0 WHERE `entry`=53752 LIMIT 1;
+UPDATE `creature_template` SET `equipment_id` = @SHANNOX_EUIPMENT_TEMPLATE WHERE `entry`=53752 LIMIT 1;
 
 -- Inserts Vehicel for Riplimb & Spear
 DELETE FROM `vehicle_template_accessory` WHERE `entry`=53694 LIMIT 1;
 INSERT INTO `vehicle_template_accessory` (`entry`, `accessory_entry`, `seat_id`, `minion`, `description`, `summontype`, `summontimer`) VALUES (53694, 53752, 1, 1, 'Riplimb Mouth (with Spear)', 8, 0);
-
 
 -- Add Taunt ImmunMask to Rageface
 UPDATE `creature_template` SET `Flags_Extra`='524288' WHERE `entry`= 53695 LIMIT 1;
 
 -- Faction Change of Crystall Trap
 UPDATE `creature_template` SET `faction_A`=14, `faction_H`=14 WHERE `entry`=53713 LIMIT 1;
+
+-- Equipment Template (Blizzlike Weapon! :-) )
+REPLACE INTO `creature_equip_template` (`entry`, `itemEntry1`, `itemEntry2`, `itemEntry3`) VALUES (@SHANNOX_EUIPMENT_TEMPLATE, 71557, 0, 0);
