@@ -19,23 +19,14 @@
 * with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-/*###########################
-#                           #
-#   Developer Info:         #
-#   Script Coded by Naios   #
-#   11/2011                 #
-#                           #
-#   Script Complete: 3%    #
-#   Tested on Trillium EMU  #
-#                           #
-###########################*/
+/**********
+* Script Coded by Naios
+* Script Complete 2% (or less)
+**********/
 
+/* TODO 
 
-/* ########################################
-Notes:
-
-
-######################################## */
+*/
 
 
 #include "ScriptPCH.h"
@@ -61,7 +52,7 @@ enum Spells
 	// Phase 2
 	SPELL_FRENZY = 23537,
 	SPELL_THE_WIDOWS_KISS = 99506,
-	
+
 	// Ciderweb Spinner
 	SPELL_BURNING_ACID = 98471, // And Cinderweb Drone
 	SPELL_FIERY_WEB_SPIN_H = 97202,
@@ -79,13 +70,30 @@ enum Spells
 
 enum Events
 {
-
+	EVENT_SUMMON_CINDERWEB_SPINNER = 1,
+	EVENT_SPINNER_BURNING_ACID = 2,
 };
 
-Phases phase;
+Position const CinderwebSummonPos[7] =
+{
+	{55.614f, 385.11f, 0, 0},
+	{61.906f, 352.12f, 0, 0},
+	{49.118f, 352.12f, 0, 0},
+	{36.080f, 357.46f, 0, 0},
+	{28.873f, 372.63f, 0, 0},
+	{32.848f, 382.93f, 0, 0},
+	{39.499f, 393.54f, 0, 0}
+};
 
-const float groundLow = 74.042;
-const float groundUp = 111.767;
+// Grounds
+const float groundLow = 74.042f;
+const float groundUp = 111.767f;
+
+// Event Timers
+const int timerSummonCinderwebSpinner = 11000;
+const int timerSpinnerBurningAcid = 7000;
+
+/**** Beth'ilac ****/
 
 class boss_bethtilac : public CreatureScript
 {
@@ -110,22 +118,35 @@ public:
 		}
 
 		InstanceScript* instance;
-		
+		Phases phase;
+
 		void Reset()
 		{
 			events.Reset();
 			summons.DespawnAll();
+			me->MonsterSay("Reset",0,0);
+
 			instance->SetBossState(DATA_BETHTILAC, NOT_STARTED);
+
+			DespawnCreatures(NPC_CINDERWEB_SPINNER);
+			DespawnCreatures(NPC_CINDERWEB_DRONE);
+			DespawnCreatures(NPC_CINDERWEB_SPIDERLING);
+			DespawnCreatures(NPC_ENGORGED_BROODLING);
+			DespawnCreatures(NPC_SPIDERWEB_FILAMENT);
+
+			me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
 			me->GetMotionMaster()->MoveTargetedHome();
-			
+
 			phase = PHASE_NON;
+
+			_Reset();
 		}
 
 		void JustSummoned(Creature* summon)
 		{
 			summons.Summon(summon);
 			summon->setActive(true);
-			DoZoneInCombat();
+			summon->AI()->DoZoneInCombat();
 		}
 
 		void KilledUnit(Unit * /*victim*/)
@@ -149,15 +170,13 @@ public:
 		void EnterCombat(Unit* who)
 		{
 			me->ClearUnitState(MOVEMENTFLAG_SWIMMING);
-
 			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
- 			
-			me->GetMotionMaster()->MovePoint(0, me->GetPositionX(),me->GetPositionY(), groundUp);
-			
-			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
-			instance->SetBossState(DATA_BETHTILAC, IN_PROGRESS);
-
 			phase = PHASE_BETHILAC_UPPER;
+			instance->SetBossState(DATA_BETHTILAC_EVENT, IN_PROGRESS);
+
+			events.ScheduleEvent(EVENT_SUMMON_CINDERWEB_SPINNER, timerSummonCinderwebSpinner);
+
+			me->GetMotionMaster()->MovePoint(0, me->GetPositionX(),me->GetPositionY(), groundUp);
 
 			_EnterCombat();
 		}
@@ -171,35 +190,125 @@ public:
 			if (me->HasUnitState(UNIT_STAT_CASTING))
 				return;
 
-			if(phase == PHASE_BETHILAC_UPPER)
+			while (uint32 eventId = events.ExecuteEvent())
 			{
+				switch (eventId)
+				{
+
+					if(phase == PHASE_BETHILAC_UPPER)
+					{
+				case EVENT_SUMMON_CINDERWEB_SPINNER:
+
+					for(int i=1; i<8; i++)
+					{
+						me->SummonCreature(NPC_CINDERWEB_SPINNER,CinderwebSummonPos[i].GetPositionX()
+							,CinderwebSummonPos[i].GetPositionY(),groundUp,TEMPSUMMON_CORPSE_DESPAWN);
+					}
+
+					events.ScheduleEvent(EVENT_SUMMON_CINDERWEB_SPINNER, timerSummonCinderwebSpinner);
+					break;
+
+					}else
+					{
 
 
 
+					}
+					if (!UpdateVictim())
+						return;
 
-
-
-			}else
-			{
-
-
-
-
-
-
-
-
-
+					DoMeleeAttackIfReady();
+				}
 			}
-			if (!UpdateVictim())
+		}
+		void DespawnCreatures(uint32 entry)
+		{
+			std::list<Creature*> creatures;
+			GetCreatureListWithEntryInGrid(creatures, me, entry, 10000000);
+
+			if (creatures.empty())
 				return;
 
-			DoMeleeAttackIfReady();
+			for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
+				(*iter)->ForcedDespawn();
 		}
 	};
 };
 
+/**** Cinderweb Spinner ****/
+
+class npc_cinderweb_spinner : public CreatureScript
+{
+public:
+	npc_cinderweb_spinner() : CreatureScript("npc_cinderweb_spinner"){}
+
+	CreatureAI* GetAI(Creature* creature) const
+	{
+		return new npc_cinderweb_spinnerAI(creature);
+	}
+
+	struct npc_cinderweb_spinnerAI : public Scripted_NoMovementAI
+	{
+		npc_cinderweb_spinnerAI(Creature *c) : Scripted_NoMovementAI(c)
+		{
+			instance = me->GetInstanceScript();
+			
+			events.Reset();
+		}
+
+		InstanceScript* instance;
+		EventMap events;
+
+		void JustDied(Unit * /*victim*/)
+		{			
+		}
+
+		void Reset()
+		{
+			events.Reset();
+		}
+
+		void EnterCombat(Unit * /*who*/)
+		{
+			events.ScheduleEvent(EVENT_SPINNER_BURNING_ACID, urand(5000,10000));
+						
+			me->GetMotionMaster()->MovePoint(0, me->GetPositionX(),me->GetPositionY(), groundLow);
+		
+			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
+		}
+
+		void UpdateAI(const uint32 diff)
+		{
+			if (me->HasUnitState(UNIT_STAT_CASTING))
+				return;
+
+			events.Update(diff);
+
+			while (uint32 eventId = events.ExecuteEvent())
+			{
+				switch (eventId)
+				{
+				
+				case EVENT_SPINNER_BURNING_ACID:
+
+					DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0, 500, true), SPELL_BURNING_ACID);
+									
+					events.ScheduleEvent(EVENT_SPINNER_BURNING_ACID, timerSpinnerBurningAcid);
+				break;
+
+				default:
+					break;
+				}
+			}	
+
+		}
+
+	};
+};
+
+
 void AddSC_boss_bethtilac()
 {
 	new boss_bethtilac();
+	new npc_cinderweb_spinner();
 }

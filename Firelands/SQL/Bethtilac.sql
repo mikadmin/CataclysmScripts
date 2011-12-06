@@ -8,6 +8,7 @@ SET @BETHTHILAC_GUID := 15428168;
 
 -- ### Set Scriptnames ###
 UPDATE `creature_template` SET `ScriptName`='boss_bethtilac' WHERE `entry`=52498 LIMIT 1;
+UPDATE `creature_template` SET `ScriptName`='npc_cinderweb_spinner' WHERE `entry`=53642 LIMIT 1;
 
 -- Sticky Web (Bethilacs Door)
 DELETE FROM `gameobject` WHERE id = 208877 and map = 720;
