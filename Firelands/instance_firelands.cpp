@@ -19,7 +19,7 @@
 * with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-// by Naios
+/* Script complete: 2% */
 
 #include "ObjectMgr.h"
 #include "ScriptMgr.h"
@@ -118,25 +118,25 @@ public:
 			switch (creature->GetEntry())
 			{
 				// Bosses
-			case NPC_BETHTILAC:
+			case BOSS_BETHTILAC:
 				uiBethilac = creature->GetGUID();
 				break;
-			case NPC_RHYOLITH:
+			case BOSS_RHYOLITH:
 				uiRhyolith = creature->GetGUID();
 				break;
-			case NPC_ALYSRAZAR:
+			case BOSS_ALYSRAZAR:
 				uiAlysrazar = creature->GetGUID();
 				break;
-			case NPC_SHANNOX:
+			case BOSS_SHANNOX:
 				uiShannox = creature->GetGUID();
 				break;
-			case NPC_BALOROC:
+			case BOSS_BALOROC:
 				uiBaloroc = creature->GetGUID();
 				break;
-			case NPC_MAJORDOMUS:
+			case BOSS_MAJORDOMUS:
 				uiMajordomus = creature->GetGUID();
 				break;
-			case NPC_RAGNAROS_CATA:
+			case BOSS_RAGNAROS_CATA:
 				uiRagnaros = creature->GetGUID();
 				break;
 
@@ -158,9 +158,9 @@ public:
 		{
 			switch (gameObject->GetEntry())
 			{
-				case GOB_DOOR_BETHILAC:
-					uiBethilacDoor = gameObject->GetGUID();
-					HandleGameObject(uiBethilacDoor,true);
+			case GOB_DOOR_BETHILAC:
+				uiBethilacDoor = gameObject->GetGUID();
+				HandleGameObject(uiBethilacDoor,true);
 				break;
 			}
 		}
@@ -173,14 +173,14 @@ public:
 		{
 			switch (creature->GetEntry())
 			{
-			case NPC_BETHTILAC:
+			case BOSS_BETHTILAC:
 				break;
-			case NPC_RHYOLITH:
-			case NPC_ALYSRAZAR:
-			case NPC_SHANNOX:
-			case NPC_BALOROC:
-			case NPC_MAJORDOMUS:
-			case NPC_RAGNAROS_CATA:
+			case BOSS_RHYOLITH:
+			case BOSS_ALYSRAZAR:
+			case BOSS_SHANNOX:
+			case BOSS_BALOROC:
+			case BOSS_MAJORDOMUS:
+			case BOSS_RAGNAROS_CATA:
 			default:
 				break;
 			}
@@ -197,17 +197,17 @@ public:
 				HandleGameObject(uiBethilacDoor, state != IN_PROGRESS);			
 				break;
 			case DATA_RHYOLITH:
-			break;
+				break;
 			case DATA_ALYSRAZAR:
-			break;
+				break;
 			case DATA_SHANNOX:
-			break;
+				break;
 			case DATA_BALOROC:
-			break;
+				break;
 			case DATA_MAJORDOMUS:
-			break;
+				break;
 			case DATA_RAGNAROS:
-			break;
+				break;
 
 			}
 
@@ -238,19 +238,19 @@ public:
 			switch (data)
 			{
 				// Bosses
-			case NPC_BETHTILAC:
+			case BOSS_BETHTILAC:
 				return uiBethilac;
-			case NPC_RHYOLITH:
+			case BOSS_RHYOLITH:
 				return uiRhyolith;
-			case NPC_ALYSRAZAR:
+			case BOSS_ALYSRAZAR:
 				return uiAlysrazar;
-			case NPC_SHANNOX:
+			case BOSS_SHANNOX:
 				return uiShannox;
-			case NPC_BALOROC:
+			case BOSS_BALOROC:
 				return uiBaloroc;
-			case NPC_MAJORDOMUS:
+			case BOSS_MAJORDOMUS:
 				return uiMajordomus;
-			case NPC_RAGNAROS_CATA:
+			case BOSS_RAGNAROS_CATA:
 				return uiRagnaros;
 
 				// Npcs
@@ -309,9 +309,9 @@ public:
 		}
 
 		void Update(uint32 diff)
-            {
-                
-            }
+		{
+
+		}
 
 	};
 

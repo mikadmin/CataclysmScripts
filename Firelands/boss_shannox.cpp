@@ -19,15 +19,10 @@
 * with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-/*###########################
-#                           #
-#      Developer Info:      #
-#   Script Coded by Naios   #
-#                           #
-#   Script Complete: ~80%   #
-#  Works with Trillium EMU  #
-#                           #
-###########################*/
+/**********
+* Script Coded by Naios
+* Script Complete 80% (or less)
+**********/
 
 /* TODO:
 - [100% DONE] Arcing Slash (works Perfect)
@@ -67,7 +62,6 @@ enum Spells
 	SPELL_CALL_SPEAR = 100663,
 	SPELL_HURL_SPEAR = 100002, // Dummy Effect & Damage
 	SPELL_HURL_SPEAR_SUMMON = 99978, //Summons Spear of Shannox
-	SPELL_HURL_SPEAR_DUMMY_SCRIPT = 100031,
 	SPELL_MAGMA_RUPTURE_SHANNOX = 99840,
 
 	SPELL_FRENZY_SHANNOX = 23537,
@@ -97,7 +91,7 @@ enum Spells
 	SPELL_MAGMA_RUPTURE = 100003, // Calls forth magma eruptions to damage nearby foes. (Dummy Effect)
 	SPELL_MAGMA_RUPTURE_VISUAL = 99841,
 
-	//Traps Abilities
+	//Trap Abilities
 	CRYSTAL_PRISON_EFFECT = 99837,
 
 };
@@ -149,9 +143,8 @@ const float maxDistanceBetweenShannoxAndDogs = 70;
 // The equipment Template of Shannox Spear
 const int ShannoxSpearEquipmentTemplate = 53000;
 
-/*#########################
-######### Shannox #########
-#########################*/
+
+/**** Shannox ****/
 
 class boss_shannox : public CreatureScript
 {
@@ -234,7 +227,7 @@ public:
 			//me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);  //TODO Only for testing
 
 			me->LoadEquipment(ShannoxSpearEquipmentTemplate);
-
+			
 			_Reset();
 		}
 
@@ -276,7 +269,7 @@ public:
 
 			DoZoneInCombat();
 			me->CallForHelp(50.0f);
-
+						
 			instance->SetBossState(DATA_SHANNOX, IN_PROGRESS);
 
 			instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_SHANNOX_HAS_SPEER);
@@ -306,8 +299,8 @@ public:
 			if(hurlSpeer)
 			{
 				hurlSpeer = false;
-				me->CastSpell(pRiplimb->GetPositionX()+(urand(0,2000)-1000),pRiplimb->GetPositionY()+(urand(0,2000)-1000),
-					pRiplimb->GetPositionZ()+10,SPELL_HURL_SPEAR_SUMMON,true);
+				me->CastSpell(pRiplimb->GetPositionX()+irand(-50,50),pRiplimb->GetPositionY()+irand(-50,50),
+					pRiplimb->GetPositionZ()+2,SPELL_HURL_SPEAR_SUMMON,true);
 				instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_SPEAR_ON_THE_GROUND);
 				//DoCast(SPELL_HURL_SPEAR_DUMMY_SCRIPT);
 			}
@@ -351,9 +344,10 @@ public:
 							DoCast(pRiplimb ,SPELL_HURL_SPEAR);
 
 						}else
-							// Shifts the Event back if Shannox has not the Spear yet
+						{	// Shifts the Event back if Shannox has not the Spear yet
 							me->LoadEquipment(0);
 							events.ScheduleEvent(EVENT_HURL_SPEAR_OR_MAGMA_RUPTUTRE, 10000);
+						}
 					}
 
 					break;
@@ -409,9 +403,7 @@ public:
 	};
 };
 
-/*#########################
-######## Rageface #########
-#########################*/
+/**** Rageface ****/
 
 class npc_rageface : public CreatureScript
 {
@@ -553,15 +545,13 @@ public:
 
 		Creature* GetShannox()
 		{
-			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_SHANNOX));
+			return ObjectAccessor::GetCreature(*me, instance->GetData64(BOSS_SHANNOX));
 		}
 
 	};
 };
 
-/*#########################
-######### Riplimb #########
-#########################*/
+/**** Riplimb ****/
 
 class npc_riplimb : public CreatureScript
 {
@@ -680,10 +670,10 @@ public:
 							GetSpear()->EnterVehicle(me, 0);
 
 							movementResetNeeded = true;
-							DoCast(me, SPELL_DOGGED_DETERMINATION);
+							// DoCast(me, SPELL_DOGGED_DETERMINATION); #Deactivated# 
 
 							// TODO Might be a Crash Reason
-							
+
 							me->GetMotionMaster()->MoveIdle(MOTION_SLOT_IDLE);
 							me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
 
@@ -691,9 +681,13 @@ public:
 
 						if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SHANNOX_HAS_SPEER && movementResetNeeded)
 						{
-							GetSpear()->ExitVehicle(0);
+
+							me->MonsterSay("Aura Removed",0,0); // DEBUG
+							me->RemoveAura(SPELL_DOGGED_DETERMINATION);
+
+							//me->GetVehicleKit() -> RemoveAllPassengers();
+							GetSpear()->ExitVehicle();
 							movementResetNeeded = false;
-							me->RemoveAurasDueToSpell(SPELL_DOGGED_DETERMINATION);
 							me->setActive(true);
 							me->Attack(me->getVictim(),true);
 						}
@@ -716,7 +710,7 @@ public:
 
 		inline Creature* GetShannox()
 		{
-			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_SHANNOX));
+			return ObjectAccessor::GetCreature(*me, instance->GetData64(BOSS_SHANNOX));
 		}
 
 		inline Creature* GetSpear()
@@ -726,9 +720,7 @@ public:
 	};
 };
 
-/*#########################
-###### Shannox Spear ######
-#########################*/
+/**** Shannox Spear ****/
 
 class npc_shannox_spear : public CreatureScript
 {
@@ -747,7 +739,7 @@ public:
 			instance = me->GetInstanceScript();
 
 			me->SetReactState(REACT_PASSIVE);
-			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
 		}
 
 		InstanceScript* instance;
@@ -765,11 +757,14 @@ public:
 			if (GetRiplimb() != NULL)
 			{
 				// Calcs 3 Circles
-				for(int r = 10; r <= 30; r = r+10)
+				for(int r = 10; r <= 50; r = r+20)
 				{
-					for(int x = 0; x <= r; x = x+ (r/10))
+					for(int x = 0; x <= r; x = x + 2)
 					{
-						me->CastSpell(me->GetPositionX()+r/2,me->GetPositionY()+sqrtf((r^2)-(x^2)),
+						me->CastSpell(me->GetPositionX()+x,me->GetPositionY()+sqrtf((r^2)-(x^2)),
+							me->GetPositionZ(),SPELL_MAGMA_RUPTURE_VISUAL,true);
+
+						me->CastSpell(me->GetPositionX()+x,me->GetPositionY()-sqrtf((r^2)-(x^2)),
 							me->GetPositionZ(),SPELL_MAGMA_RUPTURE_VISUAL,true);
 					}
 				}
@@ -797,7 +792,7 @@ public:
 
 		Creature* GetShannox()
 		{
-			return ObjectAccessor::GetCreature(*me, instance->GetData64(NPC_SHANNOX));
+			return ObjectAccessor::GetCreature(*me, instance->GetData64(BOSS_SHANNOX));
 		}
 
 		Creature* GetRiplimb()
@@ -807,9 +802,7 @@ public:
 	};
 };
 
-/*#########################
-####### Crystal Trap ######
-#########################*/
+/**** Crystal Trap ****/
 
 class npc_crystal_trap : public CreatureScript
 {
@@ -904,8 +897,8 @@ public:
 					myPrison -> DisappearAndDie();
 					tempTarget -> RemoveAurasDueToSpell(CRYSTAL_PRISON_EFFECT);
 					// Cast Spell Wary on Ripclimb
-					if(tempTarget->GetEntry() == NPC_RIPLIMB)
-						DoCast(tempTarget,SPELL_WARY_10N, true);
+					//if(tempTarget->GetEntry() == NPC_RIPLIMB)
+						//DoCast(tempTarget,SPELL_WARY_10N, true);
 
 					me->DisappearAndDie();
 
@@ -934,9 +927,7 @@ public:
 	};
 };
 
-/*#########################
-####### Achievements ######
-#########################*/
+/**** Achievements ****/
 
 //Bucket List (5829) //TODO Currently not Working!
 class achievement_bucket_list : public AchievementCriteriaScript
