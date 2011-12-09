@@ -3,8 +3,6 @@
 *
 * Copyright (C) 2008 - 2011 TrinityCore <http://www.trinitycore.org/>
 *
-* Copyright (C) 2011 TrilliumEMU <http://www.arkania.net/>
-*
 * This program is free software; you can redistribute it and/or modify it
 * under the terms of the GNU General Public License as published by the
 * Free Software Foundation; either version 2 of the License, or (at your
@@ -118,7 +116,7 @@ public:
 		}
 
 		InstanceScript* instance;
-		Phases phase;
+		Phase phase;
 
 		void Reset()
 		{
@@ -172,7 +170,7 @@ public:
 			me->ClearUnitState(MOVEMENTFLAG_SWIMMING);
 			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
 			phase = PHASE_BETHILAC_UPPER;
-			instance->SetBossState(DATA_BETHTILAC_EVENT, IN_PROGRESS);
+			instance->SetBossState(DATA_BETHTILAC, IN_PROGRESS);
 
 			events.ScheduleEvent(EVENT_SUMMON_CINDERWEB_SPINNER, timerSummonCinderwebSpinner);
 

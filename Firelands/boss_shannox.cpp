@@ -3,8 +3,6 @@
 *
 * Copyright (C) 2008 - 2011 TrinityCore <http://www.trinitycore.org/>
 *
-* Copyright (C) 2011 TrilliumEMU <http://www.arkania.net/>
-*
 * This program is free software; you can redistribute it and/or modify it
 * under the terms of the GNU General Public License as published by the
 * Free Software Foundation; either version 2 of the License, or (at your
@@ -21,31 +19,42 @@
 
 /**********
 * Script Coded by Naios
-* Script Complete 80% (or less)
+* Script Complete 83% (or less)
 **********/
 
 /* TODO:
 - [100% DONE] Arcing Slash (works Perfect)
 - [100% DONE] Insert Heroic Spells
-- [25%] Insert the Sound data
+- [50%] Insert the sound and text data
 - [100% DONE] Add Trigger for the 'Seperation Anxietly' Spell
 - [75%] Add Trigger for the Fire Nova when the Spear is reaching the Ground (Algorythm tho Draw a Circle not working)
-- [75%] Add Action that Shannox throws the Spear to Riplimb (Location Correct?)
-- [75%] Add Action that Riplimb is taking the Spear back to Shannox
+- [90%] Add Action that Shannox throws the Spear to Riplimb (Location Correct?)
+- [90%] Add Action that Riplimb is taking the Spear back to Shannox
 - [75% DONE] Add Kristall Trap Actions (Stun for Players Missing... Opcode Problem?)
 - [75%] Add Fire Trap Actions (Damage of the Trap is missing)
 - [25%] Achievements
+- [50%] rageface spells & targeted aggro
 */
 
 #include "ScriptPCH.h"
 #include "firelands.h"
 
-enum Yells
+enum Shannox_Yells
 {
 	SAY_AGGRO                                    = -1999971,
-	SAY_SOFT_ENRAGE								 = -1999972, //TODO Add Sound
+	EMOTE_SOFT_ENRAGE							 = -1999972, //TODO Add Sound
 	SAY_ON_DOGS_FALL							 = -1999973, //TODO Add Sound
 	SAY_ON_DEAD									 = -1999974, //TODO Add Sound
+	SAY_DOG_FOOD								 = -1999975, //TODO Add Sound
+	SAY_FETCH_SUPPER							 = -1999976, //TODO Add Sound
+	SAY_GO_FOR_THROAT							 = -1999977, //TODO Add Sound
+	SAY_BURN_ONE								 = -1999978, //TODO Add Sound
+	SAY_ON_KILL_ONE								 = -1999979, //TODO Add Sound
+	SAY_RIPLIMB									 = -1999980, //TODO Add Sound
+	SAY_ON_KILL_TWO								 = -1999981, //TODO Add Sound
+	SAY_BURN_TWO								 = -1999982, //TODO Add Sound
+	SAY_INTRO_SPECH_PART_ONE					 = -1999983, //TODO Add Sound
+	SAY_INTRO_SPECH_PART_TWO					 = -1999984, //TODO Add Sound
 };
 
 enum Spells
@@ -119,9 +128,18 @@ enum Events
 	// Trigger for self Dispawn (Crystal Prison)
 	EVENT_CRYSTAL_PRISON_DESPAWN = 11,
 
+	// Event trigger to reset Yells infight
+	EVENT_RIPLIMB_RESET_SHANNOX_YELL = 12,
+	EVENT_SHANNOX_RESET_INTRO_YELL = 13,
+	EVENT_SHANNOX_SEC_INTRO_YELL = 14,
+
+	// Misc
+	EVENT_UPDATE_MOTION = 15,
+
 };
 
-Position const bucketListPositions[5] =  {{0.0f,0.0f,0.0f,0.0f},
+Position const bucketListPositions[5] =
+{{0.0f,0.0f,0.0f,0.0f},
 {0.0f,0.0f,0.0f,0.0f},
 {0.0f,0.0f,0.0f,0.0f},
 {0.0f,0.0f,0.0f,0.0f},
@@ -165,9 +183,11 @@ public:
 
 			pRiplimb = NULL;
 			pRageface = NULL;
-
+	
 			softEnrage = false;
 			riplimbIsRespawning = false;
+
+			introSpeechDone = false;
 
 			Reset();
 		}
@@ -179,6 +199,7 @@ public:
 		bool riplimbIsRespawning;
 		bool bucketListCheckPoints[5];
 		bool hurlSpeer;
+		bool introSpeechDone;
 
 		void DespawnCreatures(uint32 entry, float distance)
 		{
@@ -194,6 +215,8 @@ public:
 
 		void Reset()
 		{
+
+			introSpeechDone = false;
 			instance->SetBossState(DATA_SHANNOX, NOT_STARTED);
 			me->RemoveAllAuras();
 			softEnrage = false;
@@ -223,9 +246,7 @@ public:
 				pRageface = me->SummonCreature(NPC_RAGEFACE, me->GetPositionX()+5
 					,me->GetPositionY()+5,me->GetPositionZ(),TEMPSUMMON_MANUAL_DESPAWN);
 			};
-
-			//me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);  //TODO Only for testing
-
+						
 			me->LoadEquipment(ShannoxSpearEquipmentTemplate);
 			
 			_Reset();
@@ -244,9 +265,20 @@ public:
 		{
 			instance->SetBossState(DATA_SHANNOX, FAIL);
 		}
+
 		void KilledUnit(Unit * /*victim*/)
 		{
 		}
+
+		void DoAction(const int32 action)
+        {
+            switch(action)
+            {
+			case ACTION_SAY_RIPLIMB:
+				DoScriptText(SAY_RIPLIMB,me);
+                break;
+            }
+        }
 
 		void JustDied(Unit * /*victim*/)
 		{
@@ -256,8 +288,11 @@ public:
 
 			summons.DespawnAll();
 
-			DespawnCreatures(NPC_RAGEFACE, 300.0f);
-			DespawnCreatures(NPC_RIPLIMB, 300.0f);
+			pRageface -> DisappearAndDie();
+			pRiplimb  -> DisappearAndDie();
+
+			pRiplimb = NULL; // Fix crash on using the .respawn command
+			pRageface = NULL;
 
 			instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_NON);
 
@@ -266,7 +301,6 @@ public:
 
 		void EnterCombat(Unit* who)
 		{
-
 			DoZoneInCombat();
 			me->CallForHelp(50.0f);
 						
@@ -292,6 +326,14 @@ public:
 		void UpdateAI(const uint32 diff)
 		{
 			if (!me->getVictim()) {}
+
+			if( (!introSpeechDone) && (!me->isInCombat()) )
+			{
+				introSpeechDone = true;
+				DoScriptText(SAY_INTRO_SPECH_PART_ONE,me);
+				events.ScheduleEvent(EVENT_SHANNOX_SEC_INTRO_YELL, 6500);
+				events.ScheduleEvent(EVENT_SHANNOX_RESET_INTRO_YELL, 180000); // 1:15 Min
+			}
 
 			if (me->HasUnitState(UNIT_STAT_CASTING))
 				return;
@@ -320,6 +362,14 @@ public:
 					DoCast(me, SPELL_BERSERK);
 					break;
 
+				case EVENT_SHANNOX_RESET_INTRO_YELL:
+					introSpeechDone = false;
+					break;
+
+				case EVENT_SHANNOX_SEC_INTRO_YELL:
+					DoScriptText(SAY_INTRO_SPECH_PART_TWO,me);
+					break;
+
 				case EVENT_ARCING_SLASH:
 					DoCastVictim(RAID_MODE(SPELL_ARCTIC_SLASH_10N, SPELL_ARCTIC_SLASH_25N,
 						SPELL_ARCTIC_SLASH_10H, SPELL_ARCTIC_SLASH_25H));
@@ -342,6 +392,8 @@ public:
 							hurlSpeer = true;
 
 							DoCast(pRiplimb ,SPELL_HURL_SPEAR);
+
+							DoScriptText(RAND(SAY_BURN_ONE,SAY_BURN_TWO),me);
 
 						}else
 						{	// Shifts the Event back if Shannox has not the Spear yet
@@ -372,7 +424,7 @@ public:
 
 			if (!UpdateVictim())
 				return;
-
+						
 			if ((pRiplimb->isDead() || pRageface -> isDead()) && !softEnrage)
 			{
 				// Heroic: Respawn Riplimb 30s after he is Death (Trigger)
@@ -385,11 +437,11 @@ public:
 				DoCast(me, SPELL_FRENZY_SHANNOX);
 				me->MonsterTextEmote(SAY_ON_DOGS_FALL, 0, true);
 				DoScriptText(SAY_ON_DOGS_FALL, me); //TODO Test
-				DoScriptText(SAY_SOFT_ENRAGE, me);
+				me->MonsterTextEmote(EMOTE_SOFT_ENRAGE, 0, true);
 				softEnrage = true;
 			}
 
-			if((pRiplimb->GetDistance2d(me) >= maxDistanceBetweenShannoxAndDogs || pRageface->GetDistance2d(me) >= maxDistanceBetweenShannoxAndDogs) && (!me->HasAura(SPELL_SEPERATION_ANXIETY)))
+			if(((pRiplimb->GetDistance2d(me) >= maxDistanceBetweenShannoxAndDogs && pRiplimb->isAlive()) || (pRageface->GetDistance2d(me) >= maxDistanceBetweenShannoxAndDogs) && pRageface ->isAlive()) && (!me->HasAura(SPELL_SEPERATION_ANXIETY)))
 				DoCast(me, SPELL_SEPERATION_ANXIETY);
 
 			if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_RIPLIMB_BRINGS_SPEER && pRiplimb -> GetDistance(me) <= 1)
@@ -486,9 +538,6 @@ public:
 
 		void UpdateAI(const uint32 diff)
 		{
-			if(!me->isInCombat() && GetShannox() != NULL)
-				me->SetOrientation(GetShannox()->GetOrientation());
-
 			if (me->getVictim() != NULL)
 			{
 				if(!me->HasAura(SPELL_FACE_RAGE) && me->getVictim()->HasAura(SPELL_FACE_RAGE))
@@ -577,8 +626,10 @@ public:
 		bool frenzy;
 		bool movementResetNeeded;
 		bool inTakingSpearPhase;
-		Vehicle* vehicle;
+		bool firstLimbRip;
 
+		Vehicle* vehicle;
+		
 		void Reset()
 		{
 			me->RemoveAllAuras();
@@ -586,6 +637,7 @@ public:
 			frenzy = false; // Is needed, that Frenzy is not casted twice on Riplimb
 			movementResetNeeded = false; // Is needed for correct execution of the Phases
 			inTakingSpearPhase = false; // Is needed for correct execution of the Phases
+			firstLimbRip = false;
 
 			if(GetShannox() != NULL)
 				me->GetMotionMaster()->MoveFollow(GetShannox(), walkRiplimbDistance, walkRiplimbAngle);
@@ -616,9 +668,6 @@ public:
 		{
 			if (!me->getVictim()) {}
 
-			if(!me->isInCombat() && GetShannox() != NULL)
-				me->SetOrientation(GetShannox()->GetOrientation());
-
 			events.Update(diff);
 
 			while (uint32 eventId = events.ExecuteEvent())
@@ -626,7 +675,15 @@ public:
 				switch (eventId)
 				{
 				case EVENT_LIMB_RIP:
-					DoCastVictim(SPELL_LIMB_RIP);	
+					DoCastVictim(SPELL_LIMB_RIP);
+					
+					if(GetShannox() != NULL && (!firstLimbRip))
+					{
+						firstLimbRip = true;
+						GetShannox()->GetAI()->DoAction(ACTION_SAY_RIPLIMB);
+						events.ScheduleEvent(EVENT_RIPLIMB_RESET_SHANNOX_YELL, 45000); // Resets Yell after 45s
+					}
+
 					events.ScheduleEvent(EVENT_LIMB_RIP, 12000); //TODO Find out the correct Time
 					break;
 				case EVENT_TAKING_SPEAR_DELAY:
@@ -634,6 +691,9 @@ public:
 					instance->SetData(DATA_CURRENT_ENCOUNTER_PHASE, PHASE_RIPLIMB_GOS_TO_SPEER);
 					me->GetMotionMaster()->MoveIdle(MOTION_SLOT_IDLE);
 					me->GetMotionMaster()->MovePoint(0,GetSpear()->GetPositionX(),GetSpear()->GetPositionY(),GetSpear()->GetPositionZ());
+					break;
+				case EVENT_RIPLIMB_RESET_SHANNOX_YELL:
+					firstLimbRip = false;
 					break;
 				default:
 					break;
@@ -646,6 +706,13 @@ public:
 				{
 					frenzy = true;
 					DoCast(me, SPELL_FRENZIED_DEVOLUTION);
+				}
+
+				// still experimental
+				if(instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_RIPLIMB_BRINGS_SPEER && me->isInCombat())
+				{
+					me->GetMotionMaster()->MoveIdle();
+					me->GetMotionMaster()->MovePoint(0,GetShannox()->GetPositionX(),GetShannox()->GetPositionY(),GetShannox()->GetPositionZ());
 				}
 
 				if(GetShannox()->GetDistance2d(me) >= maxDistanceBetweenShannoxAndDogs && !me->HasAura(SPELL_SEPERATION_ANXIETY)) //TODO Sniff right Distance
@@ -670,7 +737,7 @@ public:
 							GetSpear()->EnterVehicle(me, 0);
 
 							movementResetNeeded = true;
-							// DoCast(me, SPELL_DOGGED_DETERMINATION); #Deactivated# 
+							DoCast(me, SPELL_DOGGED_DETERMINATION); 
 
 							// TODO Might be a Crash Reason
 
@@ -681,15 +748,14 @@ public:
 
 						if (instance->GetData(DATA_CURRENT_ENCOUNTER_PHASE) == PHASE_SHANNOX_HAS_SPEER && movementResetNeeded)
 						{
-
-							me->MonsterSay("Aura Removed",0,0); // DEBUG
+													
 							me->RemoveAura(SPELL_DOGGED_DETERMINATION);
 
-							//me->GetVehicleKit() -> RemoveAllPassengers();
 							GetSpear()->ExitVehicle();
 							movementResetNeeded = false;
 							me->setActive(true);
 							me->Attack(me->getVictim(),true);
+
 						}
 					}
 				}
@@ -757,9 +823,9 @@ public:
 			if (GetRiplimb() != NULL)
 			{
 				// Calcs 3 Circles
-				for(int r = 10; r <= 50; r = r+20)
+				for(int r = 10; r <= 30; r = r+10)
 				{
-					for(int x = 0; x <= r; x = x + 2)
+					for(int x = 0; x <= r*2; x = x + 2)
 					{
 						me->CastSpell(me->GetPositionX()+x,me->GetPositionY()+sqrtf((r^2)-(x^2)),
 							me->GetPositionZ(),SPELL_MAGMA_RUPTURE_VISUAL,true);
