@@ -19,6 +19,7 @@
 #include "the_vortex_pinnacle.h"
 
 #define ENCOUNTERS 3
+#define STREAMS 2
 
 /* Boss Encounters
 ------------------
@@ -34,6 +35,9 @@ enum Enums
 	// Spells
 	SPELL_SLIPSTREAM = 95911,
 };
+
+		
+const uint64 streamGuids[2]  = {1074095,1074096};
 
 class instance_the_vortex_pinnacle : public InstanceMapScript
 {
@@ -201,10 +205,23 @@ public:
 		npc_slipstreamAI(Creature *c) : ScriptedAI(c)
 		{
 			instance = me->GetInstanceScript();
+			isSlipstreamNo = 0;
+
+			for (int i=0; i <= STREAMS; i++)
+			{
+				if (streamGuids[i] == me->GetGUID())
+				{
+					isSlipstreamNo = i;
+					break;
+				}
+			}
+
 			Reset();
+
 		}
 
 		InstanceScript* instance;
+		uint8 isSlipstreamNo;
 
 		void Reset()
 		{
@@ -219,13 +236,17 @@ public:
 
 		void MoveInLineOfSight(Unit* who)
 		{
-					
-			if (who->GetDistance(me) >= 5.0f || who->HasAura(SPELL_SLIPSTREAM))
+				
+			if (who->GetDistance(me) >= 5.0f || isSlipstreamNo == 2)
 				return;
-
-		
+			me->MonsterSay("Slipstream: " + isSlipstreamNo,0,0);
 			me->CastSpell(who,SPELL_SLIPSTREAM,true);
 
+			if (Creature* toChargeStream = ObjectAccessor::GetCreature(*me,streamGuids[isSlipstreamNo+1]))
+			{
+				me->MonsterSay("Charge",0,0);	
+				who->GetMotionMaster()->MoveCharge(toChargeStream->GetPositionX(),toChargeStream->GetPositionY(),toChargeStream->GetPositionZ());
+			}
 		}
 
 	};
