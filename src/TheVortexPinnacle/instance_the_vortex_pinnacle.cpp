@@ -55,9 +55,9 @@ public:
 
         uint32 uiEncounter[ENCOUNTERS];
 
-        uint32 uiGrandVizierErtan;
-        uint32 uiAltairus;
-        uint32 uiAsaad;
+        uint64 uiGrandVizierErtan;
+        uint64 uiAltairus;
+        uint64 uiAsaad;
 
         void Initialize()
         {
@@ -189,7 +189,6 @@ public:
     };
 };
 
-
 class npc_slipstream : public CreatureScript
 {
 public:
@@ -237,7 +236,7 @@ public:
 		void MoveInLineOfSight(Unit* who)
 		{
 				
-			if (who->GetDistance(me) >= 5.0f || isSlipstreamNo == 2)
+			if (who->GetDistance(me) >= 5.0f)
 				return;
 			me->MonsterSay("Slipstream: " + isSlipstreamNo,0,0);
 			me->CastSpell(who,SPELL_SLIPSTREAM,true);
@@ -256,5 +255,5 @@ public:
 void AddSC_instance_the_vortex_pinnacle()
 {
     new instance_the_vortex_pinnacle();
-	new npc_slipstream();
+	//new npc_slipstream();
 }
