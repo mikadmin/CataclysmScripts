@@ -24,6 +24,8 @@ enum Data
     DATA_ALTAIRUS_EVENT,
     DATA_ASAAD_EVENT,
     DATA_TEAM_IN_INSTANCE_EVENT,
+
+	DATA_LURKING_TEMPEST_NO,
 };
 
 enum Data64
@@ -31,6 +33,12 @@ enum Data64
     DATA_GRAND_VIZIER_ERTAN,
     DATA_ALTAIRUS,
     DATA_ASAAD,
+};
+
+enum Actions
+{
+	ACTION_LURKING_TEMPEST_GO_IN,
+	ACTION_LURKING_TEMPEST_GO_OUT,
 };
 
 enum CreatureIds
@@ -49,14 +57,14 @@ enum CreatureIds
     NPC_EXECUTOR_OF_THE_CALIPH  = 45928,
     NPC_GUST_SOLDIER            = 45477,
     NPC_HOWLING_GALE            = 45572,
-    NPC_LURKING_TEMPEST         = 45704,
+    NPC_LURKING_TEMPEST         = 45704, // Uses in the fight of ertan
     NPC_MINISTER_OF_AIR         = 45930,
     NPC_TEMPLE_ADEPT            = 45935,
     NPC_YOUNG_STORM_DRAGON      = 45919,
     NPC_WILD_VORTEX             = 45912,
     // Various NPCs
 
-	NPC_SLIPSTREAM = 47066,
+	NPC_SLIPSTREAM			    = 45455,
 
     NPC_GOLDEN_ORB              = 51157,  /*Heroic Mode*/
     NPC_ITESH                   = 49943,
