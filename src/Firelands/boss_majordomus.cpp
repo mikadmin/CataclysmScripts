@@ -19,7 +19,7 @@
 
 /**********
 * Script Coded by Naios
-* Script Complete 1% (or less)
+* Script Complete 15% (or less)
 **********/
 
 /* TODO 
@@ -42,7 +42,7 @@ enum Spells
 	SPELL_CAT_FORM								 = 98374,
 	SPELL_SCORPION_FORM							 = 98379,
 
-	SPELL_ADRENALINE							 = 97238,
+	SPELL_ADRENALINE							 = 97238, // Is not needed here i think
 	SPELL_BERSERK								 = 26662,
 	SPELL_BURNING_ORBS							 = 98451,
 	SPELL_FIERY_CYCLONE							 = 98443,
@@ -123,20 +123,29 @@ public:
 
 		void EnterCombat(Unit* who)
 		{
-			TransformToCat();
+			TransformToScorpion();
 			_EnterCombat();
 		}
 
 		void UpdateAI(const uint32 diff)
 		{
+		
+			if(phase == PHASE_SCORPION && me->GetPower(POWER_ENERGY) == 100)
+				DoCast(SPELL_FLAME_SCYTE);
+
+			
+			if (me->HasUnitState(UNIT_STAT_CASTING))
+				return;
+
 			events.Update(diff);
 
 			while (uint32 eventId = events.ExecuteEvent())
 			{
-
-
 				switch (phase)
 				{
+
+				// The Scorpion Phase has no Events
+
 				case PHASE_DRUID:
 					{
 						switch (eventId)
@@ -148,25 +157,19 @@ public:
 						}
 					}
 					break;
+
 				case PHASE_CAT:
 					{
 						switch (eventId)
 						{
-							case EVENT_LEAPING_FLAMES:
+						case EVENT_LEAPING_FLAMES:
 
-								if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500, true))
-									DoCast(tempTarget, SPELL_LEAPING_FLAMES);
+							// Spell cause Client to Crash
+							//if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500, true))
+							//	DoCastVictim(SPELL_LEAPING_FLAMES);
 
-								events.ScheduleEvent(EVENT_LEAPING_FLAMES, 20000);
-								break;
-						}
-
-					}
-					break;
-				case PHASE_SCORPION:
-					{
-						switch (eventId)
-						{
+							events.ScheduleEvent(EVENT_LEAPING_FLAMES, 20000);
+							break;
 						}
 
 					}
@@ -194,7 +197,7 @@ public:
 
 			events.Reset();
 
-			//events.ScheduleEvent(EVENT_LEAPING_FLAMES, 10000);
+			events.ScheduleEvent(EVENT_LEAPING_FLAMES, 10000);
 
 			phase = PHASE_CAT;
 		}
