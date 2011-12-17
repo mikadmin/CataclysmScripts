@@ -54,7 +54,7 @@ enum Spells
 
 enum Events
 {
-
+	EVENT_LEAPING_FLAMES = 1
 };
 
 enum MajordomoPhase
@@ -93,7 +93,9 @@ public:
 
 			me->GetMotionMaster()->MoveTargetedHome();
 
-			phase = PHASE_DRUID;
+			summons.DespawnAll();
+
+			TransformToDruid();
 
 		}
 
@@ -101,17 +103,27 @@ public:
 		{
 		}
 
+		void JustSummoned(Creature* summon)
+		{
+			summons.Summon(summon);
+			summon->setActive(true);
+
+			if(me->isInCombat())
+				summon->AI()->DoZoneInCombat();
+		}
+
 		void JustDied(Unit * /*victim*/)
 		{
 
 			instance->SetBossState(DATA_MAJORDOMUS, DONE);
 			DoScriptText(SAY_ON_DEAD, me);
+			summons.DespawnAll();
 			_JustDied();
 		}
 
 		void EnterCombat(Unit* who)
 		{
-
+			TransformToCat();
 			_EnterCombat();
 		}
 
@@ -129,6 +141,10 @@ public:
 					{
 						switch (eventId)
 						{
+
+
+
+
 						}
 					}
 					break;
@@ -136,6 +152,13 @@ public:
 					{
 						switch (eventId)
 						{
+							case EVENT_LEAPING_FLAMES:
+
+								if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500, true))
+									DoCast(tempTarget, SPELL_LEAPING_FLAMES);
+
+								events.ScheduleEvent(EVENT_LEAPING_FLAMES, 20000);
+								break;
 						}
 
 					}
@@ -152,8 +175,56 @@ public:
 			}
 
 			if (!UpdateVictim())
-				return;			
+				return;
+
+			DoMeleeAttackIfReady();
 		}
+
+
+	private:
+		inline void TransformToCat()
+		{
+			me->RemoveAura(SPELL_SCORPION_FORM);
+			DoCast(me,SPELL_CAT_FORM,false);
+			me->setPowerType(POWER_ENERGY);
+			me->SetMaxPower(POWER_ENERGY,100);
+			me->SetPower(POWER_ENERGY,0);
+
+			DoCast(me,SPELL_FURY,false);
+
+			events.Reset();
+
+			//events.ScheduleEvent(EVENT_LEAPING_FLAMES, 10000);
+
+			phase = PHASE_CAT;
+		}
+
+		inline void TransformToScorpion()
+		{
+			me->RemoveAura(SPELL_CAT_FORM);
+			DoCast(me,SPELL_SCORPION_FORM,false);
+			me->setPowerType(POWER_ENERGY);
+			me->SetMaxPower(POWER_ENERGY,100);
+			me->SetPower(POWER_ENERGY,0);
+
+			DoCast(me,SPELL_FURY,false);
+
+			events.Reset();
+
+			phase = PHASE_SCORPION;
+		}
+
+		inline void TransformToDruid()
+		{
+			me->RemoveAura(SPELL_CAT_FORM);
+			me->RemoveAura(SPELL_SCORPION_FORM);
+
+			me->setPowerType(POWER_MANA);
+			//me->SetMaxPower(POWER_MANA,155555);
+
+			phase = PHASE_DRUID;
+		}
+
 	};
 };
 
