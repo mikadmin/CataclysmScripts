@@ -16,7 +16,7 @@ set(scripts_STAT_SRCS
  #${CMAKE_SOURCE_DIR}/../CataclysmScripts/src/Firelands/boss_alysrazar.cpp
  #${CMAKE_SOURCE_DIR}/../CataclysmScripts/src/Firelands/boss_baloroc_the_doorkeeper.cpp
   ${CMAKE_SOURCE_DIR}/../CataclysmScripts/src/Firelands/boss_beth'tilac.cpp
- #${CMAKE_SOURCE_DIR}/../CataclysmScripts/src/Firelands/boss_majordomus.cpp
+  ${CMAKE_SOURCE_DIR}/../CataclysmScripts/src/Firelands/boss_majordomus.cpp
  #${CMAKE_SOURCE_DIR}/../CataclysmScripts/src/Firelands/boss_ragnaros.cpp
  #${CMAKE_SOURCE_DIR}/../CataclysmScripts/src/Firelands/boss_rhyolith.cpp
   
