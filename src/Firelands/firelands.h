@@ -57,7 +57,7 @@ enum creatures
 	BOSS_ALYSRAZAR          = 52530,
 	BOSS_SHANNOX            = 53691,
 	BOSS_BALOROC            = 53494,
-	BOSS_MAJORDOMUS         = 52571,    //54015 <-- maybe this entry
+	BOSS_MAJORDOMUS         = 52571,    // (54015 <-- maybe this entry - 52571 is spawned in the world db)
 	BOSS_RAGNAROS_CATA      = 52409,
 
 	//other npc's
