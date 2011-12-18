@@ -78,11 +78,16 @@ enum creatures
 	NPC_CINDERWEB_SPIDERLING  = 52447,
 	NPC_ENGORGED_BROODLING    = 53745, // right id?
 	NPC_SPIDERWEB_FILAMENT    = 53082,    // This is the Elevator
+
+	// Majordomo Staghelm
+	NPC_SPIRIT_OF_THE_FLAME   = 52593
 };
 
 enum gameobjectIDs
 {
-	GOB_DOOR_BETHILAC = 208877,
+	GOB_DOOR_BETHILAC		= 208877,
+	GOB_DOOR_BALOROC		= 209066,
+	GOB_DOOR_MAJORDOMO		= 208873,
 };
 
 enum Phase
@@ -98,6 +103,8 @@ enum Phase
 	// Bethilac
 	PHASE_BETHILAC_UPPER = 5,
 	PHASE_BETHILAC_LOWER = 6,
+
+
 
 	//Ragnaros
 	PHASE_1 = 7,

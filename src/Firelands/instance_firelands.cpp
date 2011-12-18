@@ -58,6 +58,8 @@ public:
 
 		// Gameobjects
 		uint64 uiBethilacDoor;
+		uint64 uiBalorocDoor;
+		uint64 uiMajordomoDoor;
 
 		// Some Data
 		uint32 TeamInInstance;
@@ -163,6 +165,16 @@ public:
 				uiBethilacDoor = gameObject->GetGUID();
 				HandleGameObject(uiBethilacDoor,true);
 				break;
+			
+			case GOB_DOOR_BALOROC:
+				uiBalorocDoor = gameObject->GetGUID();
+				HandleGameObject(uiBalorocDoor,GetBossState(DATA_BALOROC) == DONE);
+				break;
+			
+			case GOB_DOOR_MAJORDOMO:
+				uiMajordomoDoor = gameObject->GetGUID();
+				HandleGameObject(uiMajordomoDoor,GetBossState(DATA_MAJORDOMUS) == DONE);
+				break;
 			}
 		}
 
@@ -204,8 +216,12 @@ public:
 			case DATA_SHANNOX:
 				break;
 			case DATA_BALOROC:
+				if (type == DONE)
+				HandleGameObject(uiBalorocDoor,true);
 				break;
 			case DATA_MAJORDOMUS:
+				if (type == DONE)
+				HandleGameObject(uiMajordomoDoor,true);
 				break;
 			case DATA_RAGNAROS:
 				break;
