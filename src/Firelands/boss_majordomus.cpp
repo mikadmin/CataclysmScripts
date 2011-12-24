@@ -26,6 +26,8 @@
 
 /* TODO 
 
+- The Spell Leaping Flames causes the Client to Crash... I cant`t work further
+
 - Add Sound and Yells
 - Check Display IDs of the Cat and Scorpion Form
 
@@ -52,6 +54,7 @@ enum Spells
 	SPELL_FLAME_SCYTE							 = 98474, // 10N
 	SPELL_FURY									 = 97235,
 	SPELL_LEAPING_FLAMES						 = 98476,
+	SPELL_LEAPING_FLAMES_SUMMON					 = 101222,
 	SPELL_SEARING_SEEDS							 = 98450,
 };
 
@@ -122,7 +125,7 @@ public:
 			summon->setActive(true);
 
 			if(me->isInCombat())
-				summon->AI()->DoZoneInCombat();
+				DoZoneInCombat();
 		}
 
 		void JustDied(Unit * /*victim*/)
@@ -139,7 +142,7 @@ public:
 
 			events.ScheduleEvent(EVENT_BERSERK, 10 * MINUTE * IN_MILLISECONDS);
 
-			TransformToScorpion();
+			TransformToCat();
 			_EnterCombat();
 		}
 
@@ -149,6 +152,13 @@ public:
 			if(phase == PHASE_SCORPION && me->GetPower(POWER_ENERGY) == 100)
 				DoCast(SPELL_FLAME_SCYTE);
 
+			if(phase == PHASE_CAT && me->GetPower(POWER_ENERGY) == 100)
+			{
+				me->SetPower(POWER_ENERGY,0);
+
+				me->SummonCreature(NPC_SPIRIT_OF_THE_FLAME,me->GetPositionX(),me->GetPositionY()
+					,me->GetPositionZ(),TEMPSUMMON_CORPSE_DESPAWN);
+			}
 
 			if (me->HasUnitState(UNIT_STAT_CASTING))
 				return;
@@ -167,6 +177,9 @@ public:
 
 					if (phase == PHASE_CAT)
 					{
+
+
+
 
 				case EVENT_LEAPING_FLAMES:
 
@@ -206,10 +219,12 @@ public:
 		{
 			me->RemoveAura(SPELL_ADRENALINE);
 			me->RemoveAura(SPELL_SCORPION_FORM);
-			
+
+			me->SetFloatValue(OBJECT_FIELD_SCALE_X, 1);
+
 			DoCast(me,SPELL_CAT_FORM,false);
 			me->SetDisplayId(DISPLAYID_CAT);
-			
+
 			me->setPowerType(POWER_ENERGY);
 			me->SetMaxPower(POWER_ENERGY,100);
 			me->SetPower(POWER_ENERGY,0);
@@ -228,10 +243,10 @@ public:
 			me->SetFloatValue(OBJECT_FIELD_SCALE_X, 15);
 			me->RemoveAura(SPELL_ADRENALINE);
 			me->RemoveAura(SPELL_CAT_FORM);
-			
+
 			DoCast(me,SPELL_SCORPION_FORM,false);
 			me->SetDisplayId(DISPLAYID_SCORPION);
-			
+
 			me->setPowerType(POWER_ENERGY);
 			me->SetMaxPower(POWER_ENERGY,100);
 			me->SetPower(POWER_ENERGY,0);
@@ -279,7 +294,70 @@ public:
 	};
 };
 
+class npc_spirit_of_the_flame : public CreatureScript
+{
+public:
+	npc_spirit_of_the_flame() : CreatureScript("npc_spirit_of_the_flame"){}
+
+	CreatureAI* GetAI(Creature* creature) const
+	{
+		return new npc_spirit_of_the_flameAI(creature);
+	}
+
+	struct npc_spirit_of_the_flameAI : public ScriptedAI
+	{
+		npc_spirit_of_the_flameAI(Creature *c) : ScriptedAI(c), pMajordomus (NULL){}
+
+		Unit* pMajordomus;
+		bool canDropLeapingFlames;
+		Position leapingFlamesPosition;
+
+		void Reset()
+		{
+
+		}
+
+		void IsSummonedBy(Unit* summoner)
+		{
+			pMajordomus = summoner;
+		}
+
+		void JustDied(Unit * /*victim*/)
+		{
+		}
+
+		void EnterCombat(Unit* who)
+		{
+			if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500, true))
+			{
+				me->GetMotionMaster()->MoveJump(tempTarget->GetPositionX(),tempTarget->GetPositionY(),tempTarget->GetPositionZ(),1.0f,1.0f);
+				me->AddThreat(pMajordomus->getVictim(), 100.0f);
+
+				Position tempPosition = {tempTarget->GetPositionX(),tempTarget->GetPositionY(),tempTarget->GetPositionZ(), 0};
+
+				leapingFlamesPosition = tempPosition;
+
+				canDropLeapingFlames = true;
+			}
+		}
+
+		void UpdateAI(const uint32 diff)
+		{
+			if(canDropLeapingFlames && me->GetDistance(leapingFlamesPosition) == 0)
+			{
+				me->MonsterSay("Was here!",0,0);
+				me->GetMotionMaster()->MoveChase(me->getVictim());
+			}
+
+			DoMeleeAttackIfReady();
+		}
+
+
+	};
+};
+
 void AddSC_boss_majordomus()
 {
 	new boss_majordomus();
+	new npc_spirit_of_the_flame();
 }

@@ -61,6 +61,8 @@ public:
 		uint64 uiBalorocDoor;
 		uint64 uiMajordomoDoor;
 
+		uint64 uiSulfuronBridge;
+
 		// Some Data
 		uint32 TeamInInstance;
 		uint32 encounterSharingPhase;
@@ -86,6 +88,11 @@ public:
 			uiShannoxSpear			   = 0;
 
 			uiBethilacDoor			   = 0;
+			uiBalorocDoor			   = 0;
+			uiMajordomoDoor			   = 0;
+
+			uiSulfuronBridge		   = 0;
+
 
 			for (uint8 i = 0; i < MAX_ENCOUNTER; ++i)
 				Encounter[i] = NOT_STARTED;
@@ -161,6 +168,7 @@ public:
 		{
 			switch (gameObject->GetEntry())
 			{
+
 			case GOB_DOOR_BETHILAC:
 				uiBethilacDoor = gameObject->GetGUID();
 				HandleGameObject(uiBethilacDoor,true);
@@ -168,12 +176,17 @@ public:
 			
 			case GOB_DOOR_BALOROC:
 				uiBalorocDoor = gameObject->GetGUID();
-				HandleGameObject(uiBalorocDoor,GetBossState(DATA_BALOROC) == DONE);
+				HandleGameObject(uiBalorocDoor, true /* We let the Door open for testing Reasons*/ );
 				break;
 			
 			case GOB_DOOR_MAJORDOMO:
 				uiMajordomoDoor = gameObject->GetGUID();
 				HandleGameObject(uiMajordomoDoor,GetBossState(DATA_MAJORDOMUS) == DONE);
+				break;
+
+			case GOB_SULFURON_BRIDGE:
+				uiSulfuronBridge = gameObject->GetGUID();
+				HandleGameObject(uiSulfuronBridge,false);
 				break;
 			}
 		}
