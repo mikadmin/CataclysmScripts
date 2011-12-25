@@ -21,11 +21,19 @@
 
 /**********
 * Script Coded by Naios
-* Script Complete 35% (or less)
+* Script Complete 60% (or less)
 **********/
 
 #include "ScriptPCH.h"
 #include "grim_batol.h"
+#include "Vehicle.h"
+
+// ToDo Move this hardocoded Yells to the DB
+#define SAY_AGGRO "I will burn you from the inside out!"
+#define SAY_SUMMON "BY FIRE BE... BURNED!"
+#define SAY_JUMP_DOWN "Dragon, you will do as I command! Catch me!"
+#define	SAY_SUMMON_2 "INCINERATE THEM, MINIONS!"
+#define SAY_DEAD "Valiona, finish them! Avenge me!"
 
 enum Spells
 {
@@ -37,7 +45,6 @@ enum Spells
 	SPELL_TWILIGHT_PROTECTION	= 76303,
 
 	// Valionas Spells
-	SPELL_SHREDEDING_SWIPE		= 90966,
 	SPELL_VALIONAS_FLAME		= 75321,
 	SPELL_SHREDDING_SWIPE		= 75271,
 	SPELL_SEEPING_TWILIGHT		= 75317,
@@ -57,14 +64,18 @@ enum Phase
 
 enum Events
 {
-	EVENT_BURNING_SHADOWBOLT = 1,
-	EVENT_SUMMON_INVOKED_FLAME_SPIRIT = 2,
+	EVENT_BURNING_SHADOWBOLT			= 1,
+	EVENT_SUMMON_INVOKED_FLAME_SPIRIT	= 2,
+
+	EVENT_VALIONAS_FLAME				= 3,
+	EVENT_SHREDDING_SWIPE				= 4,		
+	EVENT_SEEPING_TWILIGHT				= 5,		
 };
 
 enum Actions
 {
-	ACTION_DRAGAH_CALLS_VALIONA_FOR_HELP = 1,
-	ACTION_VALIONA_SHOULD_FLY_AWAY = 2,
+	ACTION_DRAGAH_CALLS_VALIONA_FOR_HELP	= 1,
+	ACTION_VALIONA_SHOULD_FLY_AWAY			= 2,
 };
 
 enum Points
@@ -76,30 +87,18 @@ enum Points
 	POINT_DRAHGA_GO_TO_THE_LAVA		= 4,
 };
 
-enum Waypoints
-{
-	WP_VALIONA_FLY_TO_THE_BASE = 66233040,
-};
-
-Position const position[8] =
+Position const position[4] =
 {
 	{-400.613f, -671.578f, 265.896f, 0.102f},	// Drahga Point from who he jump down
-	{-435.54f, -695.072f, 268.687f, 3.401f},	// Valiona first land Position
-	{-374.315f ,-666.989f ,246.831f,0.0f},		// Valionas Way to the Platform
-	{-374.315f ,-666.989f ,267.551f,0.0f},
-	{-381.495f ,-667.637f ,280.122f,0.0f},
-	{-396.57f ,-672.039f ,280.311f,0.0f},
-	{-411.469f ,-679.817f ,279.501f,0.0f},
-	{-429.773f ,-692.022f ,277.383f,0.0f},
+	{-388.189f, -668.078f, 280.316f, 3.470f},	// Valionas Way to the Platform
+	{-435.54f, -695.072f, 280.316f, 3.4010f},
+	{-435.54f, -695.072f, 268.687f, 3.4010f},	// Valiona first land Position
 };
-
-
-
 
 class boss_drahga_shadowburner : public CreatureScript
 {
 public:
-	boss_drahga_shadowburner() : CreatureScript("boss_drahga_shadowburner") { }
+	boss_drahga_shadowburner() : CreatureScript("boss_drahga_shadowburner") {}
 
 	CreatureAI* GetAI(Creature* creature) const
 	{
@@ -122,6 +121,7 @@ public:
 
 		void Reset()
 		{
+			me->GetMotionMaster()->Clear();
 			events.Reset();
 			summons.DespawnAll();
 			phase = PHASE_CASTER_PHASE;
@@ -132,11 +132,13 @@ public:
 
 		void EnterCombat(Unit* /*pWho*/)
 		{
+			me->MonsterYell(SAY_AGGRO, LANG_UNIVERSAL, NULL);
+
 			if(pValiona == NULL)
 				pValiona = me->FindNearestCreature(NPC_VALIONA,1000.0f, true);
-			
-			if(pValiona == NULL)
-				me->MonsterYell("pValiona == NULL", LANG_UNIVERSAL, NULL);
+
+			me->GetMotionMaster()->Clear();
+				me->GetMotionMaster()->MoveChase(me->getVictim());
 
 			events.ScheduleEvent(EVENT_BURNING_SHADOWBOLT, 4000);
 			events.ScheduleEvent(EVENT_SUMMON_INVOKED_FLAME_SPIRIT, 10000);
@@ -153,6 +155,7 @@ public:
 
 		void JustDied(Unit * /*victim*/)
 		{
+			me->MonsterYell(SAY_DEAD, LANG_UNIVERSAL, NULL);
 			summons.DespawnAll();
 			pValiona -> DisappearAndDie();
 		}
@@ -163,21 +166,18 @@ public:
 			{
 				switch (id)
 				{
-					case POINT_DRAHGA_GO_TO_THE_LAVA:
+				case POINT_DRAHGA_GO_TO_THE_LAVA:
 
-						me->MonsterYell("Have Reached Point", LANG_UNIVERSAL, NULL);
+					me->MonsterYell(SAY_JUMP_DOWN, LANG_UNIVERSAL, NULL);
 
-						me->GetMotionMaster()->Clear();
-						me->GetMotionMaster()->MoveChase(me->getVictim());
+					pValiona->GetAI()->DoAction(ACTION_DRAGAH_CALLS_VALIONA_FOR_HELP);
+					me->SetSpeed(MOVE_RUN, 1.0f);
+					me->GetMotionMaster()->Clear();
+					me->JumpTo(pValiona,2);
+					break;
 
-						/*pValiona->GetAI()->DoAction(ACTION_DRAGAH_CALLS_VALIONA_FOR_HELP);
-						me->GetMotionMaster()->Clear(false);
-						me->JumpTo(pValiona,5);
-						me->Mount(pValiona->GetGUID());*/
-						break;
-					
-					default:
-						break;
+				default:
+					break;
 				}
 			}
 		}
@@ -199,18 +199,20 @@ public:
 
 			events.Update(diff);
 
-			while (uint32 eventId = events.ExecuteEvent())
+			while (uint32 eventId = events.GetEvent())
 			{
 				switch (eventId)
 				{
 				case EVENT_BURNING_SHADOWBOLT:
-
+					
 					if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
 						DoCast(pTarget, RAID_MODE(SPELL_BURNING_SHADOWBOLT,SPELL_BURNING_SHADOWBOLT_H));
 
-					events.RepeatEvent(2500);
+					events.RepeatEvent(4000);
 					break;
 				case EVENT_SUMMON_INVOKED_FLAME_SPIRIT:
+					
+					me->MonsterYell(SAY_SUMMON, LANG_UNIVERSAL, NULL);
 
 					//me->SummonCreature(NPC_INVOKED_FLAMING_SPIRIT,-423.0f, -700.0f, 269.0f,0,TEMPSUMMON_CORPSE_DESPAWN);
 
@@ -218,6 +220,7 @@ public:
 					break;
 
 				default:
+					events.PopEvent();
 					break;
 				}
 			}
@@ -239,17 +242,26 @@ public:
 
 	struct mob_valiona_gbAI : public ScriptedAI
 	{
-		mob_valiona_gbAI(Creature* creature) : ScriptedAI(creature), vehicle(creature->GetVehicleKit())
+		mob_valiona_gbAI(Creature* creature) : ScriptedAI(creature), vehicle(creature->GetVehicleKit()), summons(creature), pDragah(NULL)
 		{
 			pInstance = creature->GetInstanceScript();
+			me->SetSpeed(MOVE_FLIGHT,3.0f, true);
+			me->SetSpeed(MOVE_RUN, 3.0f, true);
 		}
 
 		InstanceScript* pInstance;
 		EventMap events;
 		Vehicle* vehicle;
+		uint8 currentWaypoint;
+		SummonList summons;
+		Creature* pDragah;
 
 		void Reset()
 		{
+			me->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
+			me->SendMovementFlagUpdate();
+			me->SetFlying(true);
+			summons.DespawnAll();
 			events.Reset();
 			me->SetReactState(REACT_PASSIVE);
 			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
@@ -258,10 +270,42 @@ public:
 
 		void EnterCombat(Unit* /*pWho*/) {}
 
-		void UpdateAI(const uint32 Diff)
+		void JustSummoned(Creature* summon)
 		{
-			if (!UpdateVictim())
+			summons.Summon(summon);
+			summon->setActive(true);
+
+			if(me->isInCombat())
+				summon->AI()->DoZoneInCombat();
+		}
+
+		void UpdateAI(const uint32 diff)
+		{
+			if (!UpdateVictim() || me-> HasUnitState(UNIT_STAT_CASTING))
 				return;
+
+			events.Update(diff);
+
+			while (uint32 eventId = events.GetEvent())
+			{
+				switch (eventId)
+				{
+				case EVENT_VALIONAS_FLAME:
+					if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
+						DoCast(pTarget, SPELL_VALIONAS_FLAME);
+					events.RepeatEvent(urand(15000,25000));
+					break;
+
+				case EVENT_SHREDDING_SWIPE:
+					DoCastVictim(SPELL_SHREDDING_SWIPE);
+					events.RepeatEvent(urand(21000,30000));
+					break;
+
+				default:
+					events.PopEvent();
+					break;
+				}
+			}
 
 			DoMeleeAttackIfReady();
 		}
@@ -272,12 +316,18 @@ public:
 			{
 			case ACTION_DRAGAH_CALLS_VALIONA_FOR_HELP:
 				DoZoneInCombat();
-				me->SetSpeed(MOVE_FLIGHT, 3.0f);
-				me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-				me->SetReactState(REACT_AGGRESSIVE);
-				me->GetMotionMaster()->MovePath(WP_VALIONA_FLY_TO_THE_BASE,false);
+				currentWaypoint = 1;
+				me->HandleEmoteCommand(EMOTE_ONESHOT_LIFTOFF);
+				me->GetMotionMaster()->MovePoint(POINT_VALIONA_FLY_IN_THE_AIR, position[1]);
 				break;
+
 			case ACTION_VALIONA_SHOULD_FLY_AWAY:
+				events.Reset();
+				me->RemoveAllAuras();
+				summons.DespawnAll();
+				break;
+
+			default:
 				break;
 			}
 		}
@@ -285,31 +335,43 @@ public:
 
 		void MovementInform(uint32 type, uint32 id)
 		{
-			if (type == POINT_MOTION_TYPE)
+			if (type != POINT_MOTION_TYPE)
+				return;
+
+			switch (id)
 			{
-				switch (id)
+			case POINT_VALIONA_FLY_IN_THE_AIR:
+				currentWaypoint++;
+
+				if(currentWaypoint < 3) // You can extend the Waypoints by yourself if you want
 				{
-				case POINT_VALIONA_FLY_IN_THE_AIR:
+					me->GetMotionMaster()->MovePoint(POINT_VALIONA_FLY_IN_THE_AIR, position[currentWaypoint]);
+				}else
+					me->GetMotionMaster()->MovePoint(POINT_VALIONA_LAND, position[3]);
 
+				break;
 
-					break;
+			case POINT_VALIONA_LAND:
 
-				case POINT_VALIONA_LAND:
-					me->GetMotionMaster()->Clear(false);
-					me->GetMotionMaster()->MoveChase(me->getVictim());
-					break;
-				}
+				me->HandleEmoteCommand(EMOTE_ONESHOT_LAND);
+				me->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
+				me->SendMovementFlagUpdate();
+				me->SetFlying(false);
+				
+				me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+				me->SetReactState(REACT_AGGRESSIVE);
+				
+				me->GetMotionMaster()->Clear();
+				me->GetMotionMaster()->MoveChase(me->getVictim());
+
+				events.ScheduleEvent(EVENT_VALIONAS_FLAME, urand(4000,7000));
+				events.ScheduleEvent(EVENT_SHREDDING_SWIPE, urand(10000,13000));
+
+				break;
+
+			default:
+				break;
 			}
-
-			/*if (type == WAYPOINT_MOTION_TYPE)
-			{
-				switch (id)
-				{
-					case 8:
-						me->GetMotionMaster()->MoveLand(POINT_VALIONA_LAND,position[1],1.0f);
-					break;
-				}
-			}*/
 		}
 	};
 };
@@ -344,7 +406,7 @@ public:
 				me->GetMotionMaster()->MoveChase(pTarget);
 
 			}else
-				me -> DisappearAndDie(); // Prevents crashes
+				me->DisappearAndDie(); // Prevents crashes
 		}
 
 		void UpdateAI(const uint32 Diff)
