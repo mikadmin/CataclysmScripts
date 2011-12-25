@@ -27,11 +27,12 @@
 /*	
 Known Bugs:
 - The Mount system does not work
-- In the first fly phase Valiona flys too slow
+- There are some Random Crashes in the Script if you close the Core (needs hard Debugging)
 */
 
 #include "ScriptPCH.h"
 #include "grim_batol.h"
+#include "Vehicle.h"
 
 // ToDo Move this hardocoded Yells to the DB
 #define SAY_AGGRO "I will burn you from the inside out!"
@@ -48,15 +49,15 @@ enum Spells
 	SPELL_BURNING_SHADOWBOLT	= 75245,
 	SPELL_BURNING_SHADOWBOLT_H	= 90915,
 
-	SPELL_INVOCATION_OF_FLAME	= 75218,
-	SPELL_INVOCATION_TRIGGER	= 75222, // Summons & Visual
+	SPELL_INVOCATION_OF_FLAME	= 75218, // Summons Trigger at Random Location
+	SPELL_INVOCATION_TRIGGER	= 75222, // Summons & Visual is casted by the Trigger
 
 	SPELL_TWILIGHT_PROTECTION	= 76303,
 
 	// Valionas Spells
 	SPELL_VALIONAS_FLAME		= 75321,
 	SPELL_SHREDDING_SWIPE		= 75271,
-	SPELL_SEEPING_TWILIGHT		= 75317,
+	SPELL_SEEPING_TWILIGHT		= 75318, // wowhead says 75317 but this spell gives the visual aura
 	SPELL_DEVOURING_FLAMES_H	= 90950,
 
 	SPELL_TWILIGHT_SHIFT		= 75328,
@@ -81,8 +82,9 @@ enum Events
 	EVENT_VALIONAS_FLAME				= 3,
 	EVENT_SHREDDING_SWIPE				= 4,		
 	EVENT_SEEPING_TWILIGHT				= 5,
+	EVENT_DEVOURING_FLAMES				= 6,
 
-	EVENT_DRAGAH_ENTER_VEHICLE			= 6,
+	EVENT_DRAGAH_ENTER_VEHICLE			= 7,
 };
 
 enum Actions
@@ -135,7 +137,6 @@ public:
 		SummonList summons;
 
 		Creature* pValiona;
-		Creature* currentSpawningTrigger;
 
 		void Reset()
 		{
@@ -143,17 +144,25 @@ public:
 			events.Reset();
 
 			if(pValiona != NULL)
+			{
 				pValiona -> DisappearAndDie();
+			
+				if(me->IsOnVehicle(pValiona))
+				me->ExitVehicle();
+
+				pValiona = NULL;
+
+			}
 
 			DespawnCreatures(NPC_INVOKED_FLAMING_SPIRIT,200.0f);
 
 			phase = PHASE_CASTER_PHASE;
-
-			me->SetFlying(false);
 		}
 
 		void EnterCombat(Unit* /*pWho*/)
 		{
+			me->SetReactState(REACT_AGGRESSIVE);
+
 			me->MonsterYell(SAY_AGGRO, LANG_UNIVERSAL, NULL);
 
 			me->GetMotionMaster()->Clear();
@@ -171,19 +180,20 @@ public:
 			{
 				summon->SetReactState(REACT_PASSIVE);
 				summon->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
-				
+
 				summon->GetAI()->DoCast(SPELL_INVOCATION_TRIGGER);
 			}
-
 		}
 
 		void JustDied(Unit * /*victim*/)
 		{
+			events.Reset();
+
 			me->MonsterYell(SAY_DEAD, LANG_UNIVERSAL, NULL);
 			DespawnCreatures(NPC_INVOKED_FLAMING_SPIRIT,200.0f);
-			
+
 			if(pValiona != NULL)
-			pValiona -> DisappearAndDie();
+				pValiona -> DisappearAndDie();
 		}
 
 		void MovementInform(uint32 type, uint32 id)
@@ -197,20 +207,12 @@ public:
 					me->MonsterYell(SAY_JUMP_DOWN, LANG_UNIVERSAL, NULL);
 
 					pValiona->GetAI()->DoAction(ACTION_DRAGAH_CALLS_VALIONA_FOR_HELP);
-					me->SetSpeed(MOVE_RUN, 1.0f);
+					me->SetSpeed(MOVE_RUN, 10.0f);
 
 					me->GetMotionMaster()->Clear();
 					me->JumpTo(pValiona,2);
 
-					// Use the following Code section only as long as the Mount system is not working
-					/*
-					//me->SetReactState(REACT_AGGRESSIVE);
-					me->GetMotionMaster()->Clear();
-					me->GetMotionMaster()->MoveChase(me->getVictim());
-					*/
-					// ------
-
-					events.ScheduleEvent(EVENT_DRAGAH_ENTER_VEHICLE,500);
+					events.ScheduleEvent(EVENT_DRAGAH_ENTER_VEHICLE,2000);
 
 					break;
 
@@ -222,8 +224,6 @@ public:
 
 		void JustReachedHome()
 		{
-			me->SetFlying(false);
-			me->Unmount();
 		}
 
 
@@ -232,12 +232,14 @@ public:
 			switch(action)
 			{
 			case ACTION_DRAGAH_IS_ON_THE_GROUND:
-				
-			me->SetReactState(REACT_AGGRESSIVE);
-			me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 
-			events.ScheduleEvent(EVENT_BURNING_SHADOWBOLT, 4000);
-			events.ScheduleEvent(EVENT_SUMMON_INVOKED_FLAME_SPIRIT, 10000);
+				me->ExitVehicle();
+
+				me->SetReactState(REACT_AGGRESSIVE);
+				me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+
+				events.ScheduleEvent(EVENT_BURNING_SHADOWBOLT, 4000);
+				events.ScheduleEvent(EVENT_SUMMON_INVOKED_FLAME_SPIRIT, 10000);
 
 				break;
 
@@ -260,20 +262,17 @@ public:
 				me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 				me->RemoveAllAuras(); // He should not die when he is jumping down...
 
-				DoCast(me,SPELL_TWILIGHT_PROTECTION);
+				DoCast(me, SPELL_TWILIGHT_PROTECTION, true);
 
 				events.Reset(); // He Should not cast while he is flying
 				me->GetMotionMaster()->MovePoint(POINT_DRAHGA_GO_TO_THE_LAVA, position[0]);
-			
+
 				pValiona = me->SummonCreature(NPC_VALIONA,-375.33f,-667.291f,270.0f,3.29545f, TEMPSUMMON_MANUAL_DESPAWN);
 			}
 
 			if(phase == PHASE_DRAGON_PHASE && !HealthAbovePct(10))
 			{
 				phase = PHASE_FINAL_PHASE;
-
-				me->SetFlying(false);
-				me->Unmount();
 
 				me->SetReactState(REACT_AGGRESSIVE);
 				me->GetMotionMaster()->Clear();
@@ -308,8 +307,11 @@ public:
 					break;
 
 				case EVENT_DRAGAH_ENTER_VEHICLE:
-					me->Mount(NPC_VALIONA);
-					me->SetFlying(true);
+					me->GetMotionMaster()->Clear();
+
+					me->NearTeleportTo(pValiona->GetPositionX(), pValiona->GetPositionY(), pValiona->GetPositionZ(), 1);
+
+					me->EnterVehicle(pValiona, 1);
 					break;
 
 				default:
@@ -349,11 +351,13 @@ public:
 
 	struct mob_valiona_gbAI : public ScriptedAI
 	{
-		mob_valiona_gbAI(Creature* creature) : ScriptedAI(creature), summons(creature)
+		mob_valiona_gbAI(Creature* creature) : ScriptedAI(creature), summons(creature), vehicle(creature->GetVehicleKit())
 		{
 			pInstance = creature->GetInstanceScript();
-			me->SetSpeed(MOVE_FLIGHT, 3.0f);
-			me->RemoveUnitMovementFlag(MOVEMENTFLAG_WALKING);
+
+			ASSERT(vehicle);
+
+			me->SetSpeed(MOVE_WALK, 3.0f);
 		}
 
 		InstanceScript* pInstance;
@@ -361,6 +365,8 @@ public:
 		uint8 currentWaypoint;
 		SummonList summons;
 		Unit* pDragah;
+
+		Vehicle* vehicle;
 
 		void Reset()
 		{
@@ -379,6 +385,12 @@ public:
 		{
 			summons.Summon(summon);
 			summon->setActive(true);
+
+			if(summon->GetEntry() == 40365) // Trigger
+			{
+				summon->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+				summon->GetAI()->DoCast(SPELL_SEEPING_TWILIGHT);
+			}
 
 			if(me->isInCombat())
 				summon->AI()->DoZoneInCombat();
@@ -407,11 +419,16 @@ public:
 					break;
 
 				case EVENT_SHREDDING_SWIPE:
-					
+
 					if(me->getVictim())
-					DoCastVictim(SPELL_SHREDDING_SWIPE);
+						DoCastVictim(SPELL_SHREDDING_SWIPE);
 
 					events.RepeatEvent(urand(21000,30000));
+					break;
+
+				case EVENT_DEVOURING_FLAMES:
+					DoCast(SelectUnit(SELECT_TARGET_RANDOM, 0), SPELL_DEVOURING_FLAMES_H);
+					events.RepeatEvent(urand(30000,35000));
 					break;
 
 				default:
@@ -440,7 +457,7 @@ public:
 				events.Reset();
 
 				me->RemoveAllAuras();
-				DoCast(me, SPELL_TWILIGHT_SHIFT);
+				DoCast(me, SPELL_TWILIGHT_SHIFT, true);
 
 				summons.DespawnAll();
 
@@ -478,7 +495,9 @@ public:
 
 			case POINT_VALIONA_LAND:
 				pDragah->GetAI()->DoAction(ACTION_DRAGAH_IS_ON_THE_GROUND);
-				
+
+				me->SetSpeed(MOVE_WALK, 1.0f);
+
 				me->SetFlying(false);
 				me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 				me->SetReactState(REACT_AGGRESSIVE);
@@ -489,6 +508,8 @@ public:
 				events.ScheduleEvent(EVENT_VALIONAS_FLAME, urand(4000,7000));
 				events.ScheduleEvent(EVENT_SHREDDING_SWIPE, urand(10000,13000));
 
+				if(/*me->GetMap()->IsHeroic()*/ true)
+					events.ScheduleEvent(EVENT_DEVOURING_FLAMES, urand(15000,17000));
 				break;
 
 			case POINT_VALIONA_FLY_AWAY:

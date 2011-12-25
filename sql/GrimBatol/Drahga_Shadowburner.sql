@@ -19,7 +19,7 @@ UPDATE `creature_template` SET `modelid1`=11686, `modelid2`=0 WHERE `entry`=4035
 UPDATE `creature_template` SET `modelid2`=0, `faction_A`=14, `faction_H`=14 WHERE `entry`=40357 LIMIT 1;
 
 -- Sets Vehicle ID for Valiona
-UPDATE `creature_template` SET `VehicleId`="40" WHERE `entry`=40320 LIMIT 1;
+UPDATE `creature_template` SET `VehicleId`="535" WHERE `entry`=40320 LIMIT 1;
 
 -- Updates Healt of the Invocation of Flame to Blizzlike Values
 UPDATE `creature_template` SET `Health_mod`=0.4114, `exp`=3 WHERE `entry`=40357 LIMIT 1;
