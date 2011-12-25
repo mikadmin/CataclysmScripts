@@ -21,12 +21,13 @@
 
 /**********
 * Script Coded by Naios
-* Script Complete 60% (or less)
+* Script Complete 80% (or less)
 **********/
 
 /*	
 Known Bugs:
 - The Mount system does not work
+- In the first fly phase Valiona flys too slow
 */
 
 #include "ScriptPCH.h"
@@ -89,7 +90,7 @@ enum Actions
 	ACTION_DRAGAH_CALLS_VALIONA_FOR_HELP	= 1,
 	ACTION_VALIONA_SHOULD_FLY_AWAY			= 2,
 
-	ACTION_FLAME_SPIRIT_WALK_TO_PLAYER		= 3,
+	ACTION_DRAGAH_IS_ON_THE_GROUND			= 3,
 };
 
 enum Points
@@ -202,11 +203,11 @@ public:
 					me->JumpTo(pValiona,2);
 
 					// Use the following Code section only as long as the Mount system is not working
-
-					me->SetReactState(REACT_AGGRESSIVE);
+					/*
+					//me->SetReactState(REACT_AGGRESSIVE);
 					me->GetMotionMaster()->Clear();
 					me->GetMotionMaster()->MoveChase(me->getVictim());
-
+					*/
 					// ------
 
 					events.ScheduleEvent(EVENT_DRAGAH_ENTER_VEHICLE,500);
@@ -225,6 +226,26 @@ public:
 			me->Unmount();
 		}
 
+
+		void DoAction(const int32 action)
+		{
+			switch(action)
+			{
+			case ACTION_DRAGAH_IS_ON_THE_GROUND:
+				
+			me->SetReactState(REACT_AGGRESSIVE);
+			me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+
+			events.ScheduleEvent(EVENT_BURNING_SHADOWBOLT, 4000);
+			events.ScheduleEvent(EVENT_SUMMON_INVOKED_FLAME_SPIRIT, 10000);
+
+				break;
+
+			default:
+				break;
+			}
+		}
+
 		void UpdateAI(const uint32 diff)
 		{
 			if (!UpdateVictim() || me->HasUnitState(UNIT_STAT_CASTING))
@@ -236,7 +257,9 @@ public:
 				me->SetSpeed(MOVE_RUN, 1.5f);
 				me->SetReactState(REACT_PASSIVE);
 
+				me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 				me->RemoveAllAuras(); // He should not die when he is jumping down...
+
 				DoCast(me,SPELL_TWILIGHT_PROTECTION);
 
 				events.Reset(); // He Should not cast while he is flying
@@ -251,6 +274,10 @@ public:
 
 				me->SetFlying(false);
 				me->Unmount();
+
+				me->SetReactState(REACT_AGGRESSIVE);
+				me->GetMotionMaster()->Clear();
+				me->GetMotionMaster()->MoveChase(me->getVictim());
 
 				pValiona->GetAI()->DoAction(ACTION_VALIONA_SHOULD_FLY_AWAY);
 
@@ -304,7 +331,7 @@ public:
 				return;
 
 			for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
-				(*iter)->ForcedDespawn();
+				(*iter)->DisappearAndDie();
 		}
 
 	};
@@ -322,7 +349,7 @@ public:
 
 	struct mob_valiona_gbAI : public ScriptedAI
 	{
-		mob_valiona_gbAI(Creature* creature) : ScriptedAI(creature), summons(creature), pDragah(NULL)
+		mob_valiona_gbAI(Creature* creature) : ScriptedAI(creature), summons(creature)
 		{
 			pInstance = creature->GetInstanceScript();
 			me->SetSpeed(MOVE_FLIGHT, 3.0f);
@@ -333,7 +360,7 @@ public:
 		EventMap events;
 		uint8 currentWaypoint;
 		SummonList summons;
-		Creature* pDragah;
+		Unit* pDragah;
 
 		void Reset()
 		{
@@ -355,6 +382,11 @@ public:
 
 			if(me->isInCombat())
 				summon->AI()->DoZoneInCombat();
+		}
+
+		void IsSummonedBy(Unit* summoner)
+		{
+			pDragah = summoner;
 		}
 
 		void UpdateAI(const uint32 diff)
@@ -445,8 +477,9 @@ public:
 				break;
 
 			case POINT_VALIONA_LAND:
+				pDragah->GetAI()->DoAction(ACTION_DRAGAH_IS_ON_THE_GROUND);
+				
 				me->SetFlying(false);
-
 				me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 				me->SetReactState(REACT_AGGRESSIVE);
 
