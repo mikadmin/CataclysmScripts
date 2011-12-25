@@ -76,13 +76,12 @@ enum Events
 {
 	EVENT_BURNING_SHADOWBOLT			= 1,
 	EVENT_SUMMON_INVOKED_FLAME_SPIRIT	= 2,
-	EVENT_SPAWN_FLAMING_SPIRIT			= 3,
 
-	EVENT_VALIONAS_FLAME				= 4,
-	EVENT_SHREDDING_SWIPE				= 5,		
-	EVENT_SEEPING_TWILIGHT				= 6,
+	EVENT_VALIONAS_FLAME				= 3,
+	EVENT_SHREDDING_SWIPE				= 4,		
+	EVENT_SEEPING_TWILIGHT				= 5,
 
-	EVENT_DRAGAH_ENTER_VEHICLE			= 7,
+	EVENT_DRAGAH_ENTER_VEHICLE			= 6,
 };
 
 enum Actions
@@ -98,8 +97,9 @@ enum Points
 	POINT_VALIONA_FLY_IN_THE_AIR	= 1,
 	POINT_VALIONA_LAND				= 2,
 	POINT_VALIONA_FLY_AWAY			= 3,
+	POINT_VALIONA_IS_AWAY			= 4,
 
-	POINT_DRAHGA_GO_TO_THE_LAVA		= 4,
+	POINT_DRAHGA_GO_TO_THE_LAVA		= 5,
 };
 
 Position const position[5] =
@@ -141,22 +141,19 @@ public:
 			me->GetMotionMaster()->Clear();
 			events.Reset();
 
+			if(pValiona != NULL)
+				pValiona -> DisappearAndDie();
+
 			DespawnCreatures(NPC_INVOKED_FLAMING_SPIRIT,200.0f);
 
 			phase = PHASE_CASTER_PHASE;
 
 			me->SetFlying(false);
-
-			if(pValiona == NULL)
-				pValiona = me->FindNearestCreature(NPC_VALIONA,1000.0f, true);
 		}
 
 		void EnterCombat(Unit* /*pWho*/)
 		{
 			me->MonsterYell(SAY_AGGRO, LANG_UNIVERSAL, NULL);
-
-			if(pValiona == NULL)
-				pValiona = me->FindNearestCreature(NPC_VALIONA,1000.0f, true);
 
 			me->GetMotionMaster()->Clear();
 			me->GetMotionMaster()->MoveChase(me->getVictim());
@@ -183,6 +180,8 @@ public:
 		{
 			me->MonsterYell(SAY_DEAD, LANG_UNIVERSAL, NULL);
 			DespawnCreatures(NPC_INVOKED_FLAMING_SPIRIT,200.0f);
+			
+			if(pValiona != NULL)
 			pValiona -> DisappearAndDie();
 		}
 
@@ -242,9 +241,11 @@ public:
 
 				events.Reset(); // He Should not cast while he is flying
 				me->GetMotionMaster()->MovePoint(POINT_DRAHGA_GO_TO_THE_LAVA, position[0]);
+			
+				pValiona = me->SummonCreature(NPC_VALIONA,-375.33f,-667.291f,270.0f,3.29545f, TEMPSUMMON_MANUAL_DESPAWN);
 			}
 
-			if(phase == PHASE_CASTER_PHASE && !HealthAbovePct(10))
+			if(phase == PHASE_DRAGON_PHASE && !HealthAbovePct(10))
 			{
 				phase = PHASE_FINAL_PHASE;
 
@@ -252,6 +253,8 @@ public:
 				me->Unmount();
 
 				pValiona->GetAI()->DoAction(ACTION_VALIONA_SHOULD_FLY_AWAY);
+
+				pValiona = NULL;
 
 			}
 
@@ -280,13 +283,6 @@ public:
 				case EVENT_DRAGAH_ENTER_VEHICLE:
 					me->Mount(NPC_VALIONA);
 					me->SetFlying(true);
-					break;
-
-				case EVENT_SPAWN_FLAMING_SPIRIT:
-
-					if(currentSpawningTrigger != NULL) // Prevents Crashes
-						currentSpawningTrigger->SummonCreature(NPC_INVOKED_FLAMING_SPIRIT, currentSpawningTrigger->GetPositionX(),currentSpawningTrigger->GetPositionY(),currentSpawningTrigger->GetPositionZ(),0,TEMPSUMMON_CORPSE_DESPAWN)
-						->AI()->DoZoneInCombat();
 					break;
 
 				default:
@@ -463,9 +459,11 @@ public:
 				break;
 
 			case POINT_VALIONA_FLY_AWAY:
+				me->GetMotionMaster()->MovePoint(POINT_VALIONA_IS_AWAY, position[4]);
+				break;
 
-				me->GetMotionMaster()->MovePoint(0, position[4]);
-
+			case POINT_VALIONA_IS_AWAY:
+				me->DisappearAndDie();
 				break;
 
 			default:
@@ -513,7 +511,6 @@ public:
 			if(me->GetDistance(me->getVictim()) < 1 )
 			{
 				DoCastVictim(RAID_MODE(SPELL_SUPERNOVA,	SPELL_SUPERNOVA_H));
-				me->DespawnOrUnsummon();
 				me -> DisappearAndDie();
 			}
 		}
