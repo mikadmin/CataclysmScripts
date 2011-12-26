@@ -1,190 +1,197 @@
-/* Dreadii Scripting 2011
+/*
+* Copyright (C) 2005 - 2011 MaNGOS <http://www.getmangos.org/>
 *
-*Script Complete: 50%
+* Copyright (C) 2008 - 2011 TrinityCore <http://www.trinitycore.org/>
 *
-*Todo:
-*-add full sql support
-*-add spells for heroic mode
+* Copyright (C) 2011 ArkCORE <http://www.arkania.net/>
+*
+* This program is free software; you can redistribute it and/or modify it
+* under the terms of the GNU General Public License as published by the
+* Free Software Foundation; either version 2 of the License, or (at your
+* option) any later version.
+*
+* This program is distributed in the hope that it will be useful, but WITHOUT
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+* FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+* more details.
+*
+* You should have received a copy of the GNU General Public License along
+* with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+
+/**********
+* Script Coded by Naios
+* Spell & Definitions by Dreadii
+* Script Complete 20% (or less)
+**********/
 
 #include "ScriptPCH.h"
 
-enum CreatureIds
-{
-    BOSS_ERUDAX         = 40484,
-    MOB_FACELESS        = 40600,
-};
-
 enum Spells
 {
-    //boss_erudax
-    SPELL_PLAGUE         = 82622,    //seuche der zeitalter
-    SPELL_ORKAN          = 75664,    //schattenorkan
-    SPELL_SPAWN          = 75704,    //gesichtslosen beschwören
-    //faceless curruptor
-    SPELL_CORRUPTION     = 75520,
-    SPELL_UMBRALE        = 75763,
-    SPELL_SIPHON         = 75755,
-}
+	//Erudax
+
+	SPELL_ENFEEBLING_BLOW	= 75789,
+
+
+	// OLD
+
+	SPELL_PLAGUE         = 82622,    //seuche der zeitalter
+	SPELL_ORKAN          = 75664,    //schattenorkan
+	SPELL_SPAWN          = 75704,    //gesichtslosen beschwören
+	//Faceless curruptor
+	SPELL_CORRUPTION     = 75520,
+	SPELL_UMBRALE        = 75763,
+	SPELL_SIPHON         = 75755,
+};
 
 enum Yells
 {
-    SAY_AGGRO            = -1800200,
-    SAY_DEATH            = -1800201,
-    SAY_SUMMON           = -1800201,
+	SAY_AGGRO            = -1800200,
+	SAY_DEATH            = -1800201,
+	SAY_SUMMON           = -1800201,
 };
 
 enum Events
 {
-    //boss_erudax
-    EVENT_PLAGUE         = 1,
-    EVENT_ORKAN          = 2,
-    EVENT_SUMMON         = 3,
-    //faceless curruptor
-    EVENT_CORRUPTION     = 4,
-    EVENT_UMBRALE        = 5,
-    EVENT_SIPHON         = 6,
+	EVENT_ENFEEBLING_BLOW	= 1,
 };
 
-enum SummonIds
+const Position positions[3] =
 {
-    MOB_FACELESS         = 40600,
-};
-
-const Position aSpawnLocations[2] =
-{
-    {-0.0f, -0.0f, 0.0f, 0.0f},
-    {-0.0f, -0.0f, 0.0f, 0.0f},
+	{-0.0f, -0.0f, 0.0f, 0.0f}, // First Add Spawn Location
+	{-0.0f, -0.0f, 0.0f, 0.0f},	// Second Add Spawn Location
+	{-0.0f, -0.0f, 0.0f, 0.0f}, // Egg Location
 };
 
 
 class boss_erudax: public CreatureScript
 {
 public: 
- boss_erudax() : CreatureScript("boss_erudax") { } 
+	boss_erudax() : CreatureScript("boss_erudax") { } 
 
- struct boss_erudaxAI : public ScriptedAI
-    {
-        boss_general_umbrissAI(Creature* pCreature) : ScriptedAI(pCreature), Summons(me)
+	CreatureAI* GetAI(Creature* creature) const
+	{
+		return new boss_erudaxAI (creature);
+	}
+
+	struct boss_erudaxAI : public ScriptedAI
+	{
+		boss_erudaxAI(Creature* pCreature) : ScriptedAI(pCreature), Summons(me)
 		{
-            pInstance = pCreature->GetInstanceScript();
+			pInstance = pCreature->GetInstanceScript();
 		}
 
-        InstanceScript* pInstance;
-        EventMap events;
-        SummonList Summons;
+		InstanceScript* pInstance;
+		EventMap events;
+		SummonList Summons;
 
-        void EnterCombat(Unit* /*who*/) 
-        {
-            EnterPhaseGround();
-            DoScriptText(SAY_AGGRO, me);
-        }
+		void Reset()
+		{
+			events.Reset();
+		}
 
-        void JustDied(Unit* /*killer*/)
-        {
-            DoScriptText(SAY_DEATH, me);
-        }
+		void EnterCombat(Unit* /*who*/) 
+		{
+			events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, 5000);
 
-        void JustSummoned(Creature *pSummoned)
-        {
-            pSummoned->SetInCombatWithZone();
-            if (Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM,0))
-            pSummoned->AI()->AttackStart(pTarget);
+			DoScriptText(SAY_AGGRO, me);
+		}
 
-            Summons.Summon(pSummoned);
-        }
+		void UpdateAI(const uint32 diff)
+		{
+			if (!UpdateVictim() || me->HasUnitState(UNIT_STAT_CASTING))
+				return;
 
-        void SummonedCreatureDespawn(Creature *summon)
-        {
-            Summons.Despawn(summon);
-        }
+			events.Update(diff);
 
-        void EnterPhaseGround()
-        {
-            //erudax
-			events.ScheduleEvent(EVENT_PLAGUE, 10000);
-            events.ScheduleEvent(EVENT_ORKAN, 33000);
-            events.ScheduleEvent(EVENT_SUMMON, 50000);
-            //faceless curruptor
-            events.ScheduleEvent(EVENT_CORRUPTION, 30000);
-            events.ScheduleEvent(EVENT_UMBRALE, 30000);
-            events.ScheduleEvent(EVENT_SIPHON, 30000);
-        }
-//-------------------------------------Rewritten
+			while (uint32 eventId = events.ExecuteEvent())
+			{
+				switch (eventId)
+				{
 
+				case EVENT_ENFEEBLING_BLOW:
+					DoCastVictim(SPELL_ENFEEBLING_BLOW);
+					events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, 20000);
+					break;
 
-/*
-Mob Erudax id = 40600
-*/
+				default:
+					break;
+				}
+			}
 
-class mob_faceless: public CreatureScript
-{
-public: 
- mob_faceless() : CreatureScript("mob_faceless") { } 
+			DoMeleeAttackIfReady();
+		}
 
- struct mob_facelessAI : public ScriptedAI
-    {
-        mob_faceless(Creature *c) : ScriptedAI(c) {}
+		void JustDied(Unit* /*killer*/)
+		{
+			DoScriptText(SAY_DEATH, me);
+		}
 
-		uint32 corruption;
-		uint32 umbrale;
-		uint32 siphon;
+		void JustSummoned(Creature* summon)
+		{
+			/*pSummoned->SetInCombatWithZone();
+			if (Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM,0))
+			pSummoned->AI()->AttackStart(pTarget);
+			*/
+			summon->setActive(true);
 
-        void Reset()
-        {
-           corruption = 10000; 
-           umbrale = 15000;
-		   siphon = 20000;
-        }
+			Summons.Summon(summon);
+		}
 
-        void UpdateAI(const uint32 diff)
-        {
-                if (!UpdateVictim())
-                    return;
-           
-            if (corruption <= diff)
-            {
-                if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
-                                                DoCast(pTarget, spell_corruption);
-                corruption = 10000;
-            }
-            else
-                corruption -= diff;
-				
-            if (umbrale <= diff)
-            {
-                if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
-                                                DoCast(pTarget, spell_umbrale);
-                umbrale = 15000;
-            }
-            else
-                umbrale -= diff;
-				
-            if (siphon <= diff)
-            {
-                if (Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
-                                                DoCast(pTarget, spell_siphon);
-                siphon = 20000;
-            }
-            else
-                siphon -= diff;
-
-			                if (!UpdateVictim())
-                    return;
-					
-            DoMeleeAttackIfReady();
-        }
-    };
-
-    CreatureAI* GetAI(Creature* pCreature) const
-    {
-        return new mob_erudaxAI (pCreature);
-    }
-
+		void SummonedCreatureDespawn(Creature* summon)
+		{
+			Summons.Despawn(summon);
+		}
+	};
 };
 
+
+class mob_faceless : public CreatureScript
+{
+public:
+	mob_faceless() : CreatureScript("mob_faceless") { }
+
+	CreatureAI* GetAI(Creature* creature) const
+	{
+		return new mob_facelessAI (creature);
+	}
+
+	struct mob_facelessAI : public ScriptedAI
+	{
+		mob_facelessAI(Creature* creature) : ScriptedAI(creature), pTarget(NULL) {}
+
+		Unit* pTarget;
+
+		EventMap events;
+
+		void IsSummonedBy(Unit* summoner)
+		{
+			DoZoneInCombat();
+
+			me->GetMotionMaster()->MoveChase(GetPlayerAtMinimumRange(1.0f));
+
+			me->SetReactState(REACT_PASSIVE);
+
+			/*			
+			//faceless curruptor
+			events.ScheduleEvent(EVENT_CORRUPTION, 30000);
+			events.ScheduleEvent(EVENT_UMBRALE, 30000);
+			events.ScheduleEvent(EVENT_SIPHON, 30000);
+			*/
+
+		}
+
+		void UpdateAI(const uint32 Diff)
+		{	
+			if (!UpdateVictim())
+				return;
+
+		}
+	};
+};
 void AddSC_boss_erudax() 
 {
-    new boss_erudax();
-	new mob_erudax();
+	new boss_erudax();
+	new mob_faceless();
 }
