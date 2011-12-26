@@ -21,26 +21,27 @@
 
 /**********
 * Script Coded by Naios
-* Script Complete 80% (or less)
+* Script Complete 90% (or less)
 **********/
 
 /*	
 Known Bugs:
-- The Mount system does not work
-- There are some Random Crashes in the Script if you close the Core (needs hard Debugging)
+# The Mount system does not work
+
+# There are some random Crashes if you close the Core (needs hard Debugging),
+# maybe it is the fault of the core because the core crashes on shutdown if you don't have logged in.
 */
 
 #include "ScriptPCH.h"
 #include "grim_batol.h"
 #include "Vehicle.h"
 
-// ToDo Move this hardocoded Yells to the DB
+// ToDo Move this hardocoded Yells to the DB and add Sound Data to it
 #define SAY_AGGRO "I will burn you from the inside out!"
 #define SAY_SUMMON "BY FIRE BE... BURNED!"
-#define SAY_JUMP_DOWN "Dragon, you will do as I command! Catch me!"
 #define	SAY_SUMMON_2 "INCINERATE THEM, MINIONS!"
+#define SAY_JUMP_DOWN "Dragon, you will do as I command! Catch me!"
 #define SAY_DEAD "Valiona, finish them! Avenge me!"
-
 #define SAY_VALIONA "If they do not kill you, I will do it myself!"
 
 enum Spells
@@ -72,6 +73,8 @@ enum Phase
 	PHASE_CASTER_PHASE	= 1,
 	PHASE_DRAGON_PHASE	= 2,
 	PHASE_FINAL_PHASE	= 3,
+
+	PHASE_NON			= 4,
 };
 
 enum Events
@@ -128,10 +131,10 @@ public:
 	{
 		boss_drahga_shadowburnerAI(Creature* creature) : ScriptedAI(creature), summons(creature), pValiona(NULL)
 		{
-			pInstance = creature->GetInstanceScript();
+			//pInstance = creature->GetInstanceScript();
 		}
 
-		InstanceScript* pInstance;
+		//InstanceScript* pInstance;
 		Phase phase;
 		EventMap events;
 		SummonList summons;
@@ -140,27 +143,19 @@ public:
 
 		void Reset()
 		{
-			me->GetMotionMaster()->Clear();
-			events.Reset();
+			//me->GetMotionMaster()->Clear();
 
-			if(pValiona != NULL)
-			{
-				pValiona -> DisappearAndDie();
-			
-				if(me->IsOnVehicle(pValiona))
-				me->ExitVehicle();
+			pValiona = NULL;
 
-				pValiona = NULL;
+			SaveDespawnCreatures();
 
-			}
-
-			DespawnCreatures(NPC_INVOKED_FLAMING_SPIRIT,200.0f);
-
-			phase = PHASE_CASTER_PHASE;
+			phase = PHASE_NON;
 		}
 
 		void EnterCombat(Unit* /*pWho*/)
 		{
+			phase = PHASE_CASTER_PHASE;
+
 			me->SetReactState(REACT_AGGRESSIVE);
 
 			me->MonsterYell(SAY_AGGRO, LANG_UNIVERSAL, NULL);
@@ -178,7 +173,6 @@ public:
 
 			if(summon->GetEntry() == NPC_INVOCATION_OF_THE_FLAME_STALKER)
 			{
-				summon->SetReactState(REACT_PASSIVE);
 				summon->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 
 				summon->GetAI()->DoCast(SPELL_INVOCATION_TRIGGER);
@@ -190,10 +184,8 @@ public:
 			events.Reset();
 
 			me->MonsterYell(SAY_DEAD, LANG_UNIVERSAL, NULL);
-			DespawnCreatures(NPC_INVOKED_FLAMING_SPIRIT,200.0f);
 
-			if(pValiona != NULL)
-				pValiona -> DisappearAndDie();
+			SaveDespawnCreatures();
 		}
 
 		void MovementInform(uint32 type, uint32 id)
@@ -207,7 +199,7 @@ public:
 					me->MonsterYell(SAY_JUMP_DOWN, LANG_UNIVERSAL, NULL);
 
 					pValiona->GetAI()->DoAction(ACTION_DRAGAH_CALLS_VALIONA_FOR_HELP);
-					me->SetSpeed(MOVE_RUN, 10.0f);
+					me->SetSpeed(MOVE_RUN, 1.0f);
 
 					me->GetMotionMaster()->Clear();
 					me->JumpTo(pValiona,2);
@@ -222,18 +214,13 @@ public:
 			}
 		}
 
-		void JustReachedHome()
-		{
-		}
-
-
 		void DoAction(const int32 action)
 		{
 			switch(action)
 			{
 			case ACTION_DRAGAH_IS_ON_THE_GROUND:
 
-				me->ExitVehicle();
+				//me->ExitVehicle();
 
 				me->SetReactState(REACT_AGGRESSIVE);
 				me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
@@ -267,7 +254,7 @@ public:
 				events.Reset(); // He Should not cast while he is flying
 				me->GetMotionMaster()->MovePoint(POINT_DRAHGA_GO_TO_THE_LAVA, position[0]);
 
-				pValiona = me->SummonCreature(NPC_VALIONA,-375.33f,-667.291f,270.0f,3.29545f, TEMPSUMMON_MANUAL_DESPAWN);
+				pValiona = me->SummonCreature(NPC_VALIONA,-375.33f,-667.291f,270.0f,3.29545f, TEMPSUMMON_CORPSE_DESPAWN);
 			}
 
 			if(phase == PHASE_DRAGON_PHASE && !HealthAbovePct(10))
@@ -309,9 +296,7 @@ public:
 				case EVENT_DRAGAH_ENTER_VEHICLE:
 					me->GetMotionMaster()->Clear();
 
-					me->NearTeleportTo(pValiona->GetPositionX(), pValiona->GetPositionY(), pValiona->GetPositionZ(), 1);
-
-					me->EnterVehicle(pValiona, 1);
+					// me->EnterVehicle(pValiona, 1);
 					break;
 
 				default:
@@ -333,9 +318,16 @@ public:
 				return;
 
 			for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
-				(*iter)->DisappearAndDie();
+				(*iter)->DespawnOrUnsummon();
 		}
 
+		void SaveDespawnCreatures()
+		{
+			DespawnCreatures(NPC_INVOCATION_OF_THE_FLAME_STALKER,500.0f); // Maybe the Core crashes on unload the Trigger
+			DespawnCreatures(NPC_INVOKED_FLAMING_SPIRIT,500.0f);
+			DespawnCreatures(NPC_SEEPING_TWILIGHT_TRIGGER,500.0f);
+			DespawnCreatures(NPC_VALIONA,500.0f);
+		}
 	};
 };
 
@@ -351,42 +343,41 @@ public:
 
 	struct mob_valiona_gbAI : public ScriptedAI
 	{
-		mob_valiona_gbAI(Creature* creature) : ScriptedAI(creature), summons(creature), vehicle(creature->GetVehicleKit())
+		mob_valiona_gbAI(Creature* creature) : ScriptedAI(creature), summons(creature)//, vehicle(creature->GetVehicleKit())
 		{
-			pInstance = creature->GetInstanceScript();
+			//pInstance = creature->GetInstanceScript();
 
-			ASSERT(vehicle);
-
-			me->SetSpeed(MOVE_WALK, 3.0f);
+			//ASSERT(vehicle);
 		}
 
-		InstanceScript* pInstance;
+		//InstanceScript* pInstance;
 		EventMap events;
 		uint8 currentWaypoint;
 		SummonList summons;
 		Unit* pDragah;
 
-		Vehicle* vehicle;
+		// Vehicle* vehicle;
 
 		void Reset()
 		{
+			me->SetSpeed(MOVE_WALK, 3.0f);
+
 			me->SetFlying(true);
 
 			events.Reset();
 
 			me->SetReactState(REACT_PASSIVE);
 			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-			me->GetMotionMaster()->MoveTargetedHome();
+			//me->GetMotionMaster()->MoveTargetedHome();
 		}
 
 		void EnterCombat(Unit* /*pWho*/) {}
 
 		void JustSummoned(Creature* summon)
 		{
-			summons.Summon(summon);
 			summon->setActive(true);
 
-			if(summon->GetEntry() == 40365) // Trigger
+			if(summon->GetEntry() == NPC_SEEPING_TWILIGHT_TRIGGER)
 			{
 				summon->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 				summon->GetAI()->DoCast(SPELL_SEEPING_TWILIGHT);
@@ -459,8 +450,6 @@ public:
 				me->RemoveAllAuras();
 				DoCast(me, SPELL_TWILIGHT_SHIFT, true);
 
-				summons.DespawnAll();
-
 				me->SetReactState(REACT_PASSIVE);
 				me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 
@@ -489,7 +478,7 @@ public:
 				{
 					me->GetMotionMaster()->MovePoint(POINT_VALIONA_FLY_IN_THE_AIR, position[currentWaypoint]);
 				}else
-					me->GetMotionMaster()->MovePoint(POINT_VALIONA_LAND, position[3]);
+					me->GetMotionMaster()->MoveLand(POINT_VALIONA_LAND, position[3],5);
 
 				break;
 
@@ -508,21 +497,35 @@ public:
 				events.ScheduleEvent(EVENT_VALIONAS_FLAME, urand(4000,7000));
 				events.ScheduleEvent(EVENT_SHREDDING_SWIPE, urand(10000,13000));
 
-				if(/*me->GetMap()->IsHeroic()*/ true)
+				if(/*me->GetMap()->IsHeroic()*/ true) // To test it on non heroic difficulty
 					events.ScheduleEvent(EVENT_DEVOURING_FLAMES, urand(15000,17000));
 				break;
 
 			case POINT_VALIONA_FLY_AWAY:
+				DespawnCreatures(NPC_SEEPING_TWILIGHT_TRIGGER,500.0f);
 				me->GetMotionMaster()->MovePoint(POINT_VALIONA_IS_AWAY, position[4]);
 				break;
 
 			case POINT_VALIONA_IS_AWAY:
-				me->DisappearAndDie();
+				me->DespawnOrUnsummon();
 				break;
 
 			default:
 				break;
 			}
+		}
+
+	private:
+		void DespawnCreatures(uint32 entry, float distance)
+		{
+			std::list<Creature*> creatures;
+			GetCreatureListWithEntryInGrid(creatures, me, entry, distance);
+
+			if (creatures.empty())
+				return;
+
+			for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
+				(*iter)->DespawnOrUnsummon();
 		}
 	};
 };
@@ -539,22 +542,30 @@ public:
 
 	struct mob_invoked_flame_spiritAI : public ScriptedAI
 	{
-		mob_invoked_flame_spiritAI(Creature* creature) : ScriptedAI(creature) { }
+		mob_invoked_flame_spiritAI(Creature* creature) : ScriptedAI(creature), pTarget(NULL) {}
 
-		void Reset()
-		{
-		}
-
-		void EnterCombat(Unit* /*pWho*/)
-		{
-		}
+		Unit* pTarget;
 
 		void IsSummonedBy(Unit* summoner)
 		{
 			DoZoneInCombat();
 
-			// ToDo add Random Target Aggro
+			/*uint8 p = urand(0, me->GetMap()->GetPlayers().getSize());
+
+			Map::PlayerList const &PlayerList = me->GetMap()->GetPlayers();
+
+			if (!PlayerList.isEmpty())
+			{
+			for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
+			{
+			if(i == p)
+			pTarget = i->getSource();
+			}
+			}*/
+
 			me->GetMotionMaster()->MoveChase(GetPlayerAtMinimumRange(1.0f));
+
+			me->SetReactState(REACT_PASSIVE);
 		}
 
 		void UpdateAI(const uint32 Diff)
@@ -562,10 +573,10 @@ public:
 			if (!UpdateVictim())
 				return;
 
-			if(me->GetDistance(me->getVictim()) < 1 )
+			if(me->GetDistance(me->getVictim()) < 1.0f )
 			{
 				DoCastVictim(RAID_MODE(SPELL_SUPERNOVA,	SPELL_SUPERNOVA_H));
-				me -> DisappearAndDie();
+				me -> DespawnOrUnsummon();
 			}
 		}
 	};
