@@ -74,7 +74,7 @@ public:
             return false;
         }
 
-        void OnCreatureCreate(Creature* creature, bool )
+        void OnCreatureCreate(Creature* creature)
         {
             switch (creature->GetEntry())
             {
@@ -93,9 +93,9 @@ public:
             }
         }
 
-        uint64 getData64(uint32 identifier)
+        uint64 GetData64(uint32 data)
         {
-            switch (identifier)
+            switch (data)
             {
                 case DATA_GENERAL_UMBRISS:
                     return GeneralUmbriss;
