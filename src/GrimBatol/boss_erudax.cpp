@@ -46,6 +46,8 @@ enum Spells
 
 	// Faceless
 	SPELL_UMBRAL_MENDING			= 75763,
+	SPELL_TWILIGHT_CORRUPTION_DOT	= 93613,
+	SPELL_TWILIGHT_CORRUPTION_VISUAL = 91049,
 
 	// Alexstraszas Eggs
 	SPELL_SUMMON_TWILIGHT_HATCHLINGS = 91058,
@@ -69,11 +71,9 @@ enum Events
 	EVENT_REMOVE_TWILIGHT_PORTAL = 4,
 };
 
-const Position positions[3] =
+enum Points
 {
-	{-0.0f, -0.0f, 0.0f, 0.0f}, // First Add Spawn Location
-	{-0.0f, -0.0f, 0.0f, 0.0f},	// Second Add Spawn Location
-	{-0.0f, -0.0f, 0.0f, 0.0f}, // Egg Location
+	POINT_FACELESS_IS_AT_AN_EGG = 1,
 };
 
 
@@ -89,27 +89,23 @@ public:
 
 	struct boss_erudaxAI : public ScriptedAI
 	{
-		boss_erudaxAI(Creature* pCreature) : ScriptedAI(pCreature), Summons(me)
+		boss_erudaxAI(Creature* pCreature) : ScriptedAI(pCreature)
 		{
 			pInstance = pCreature->GetInstanceScript();
+
+			RespawnEggs();
 		}
 
 		Unit* FacelessPortalStalker;
 
 		InstanceScript* pInstance;
 		EventMap events;
-		SummonList Summons;
-
+		
 		void Reset()
 		{
 			events.Reset();
 
-			DespawnCreatures(NPC_FACELESS);
-			DespawnCreatures(NPC_FACELESS_HC);
-			DespawnCreatures(NPC_TWILIGHT_HATCHLING);
-			DespawnCreatures(NPC_FACELESS_PORTAL_STALKER);
-
-			Summons.DespawnAll();
+			ResetMinions();
 		}
 
 		void EnterCombat(Unit* /*who*/) 
@@ -121,7 +117,7 @@ public:
 			me->MonsterYell(SAY_AGGRO, LANG_UNIVERSAL, NULL);
 
 			FacelessPortalStalker = me->SummonCreature(NPC_FACELESS_PORTAL_STALKER,-680.8f,-826.9f,233.1f,0,TEMPSUMMON_MANUAL_DESPAWN);
-			
+
 			FacelessPortalStalker->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 		}
 
@@ -175,11 +171,8 @@ public:
 
 		void JustDied(Unit* /*killer*/)
 		{	
-			DespawnCreatures(NPC_FACELESS);
-			DespawnCreatures(NPC_FACELESS_HC);
-			DespawnCreatures(NPC_FACELESS_PORTAL_STALKER);
-			DespawnCreatures(NPC_TWILIGHT_HATCHLING);
-			Summons.DespawnAll();
+			ResetMinions();
+
 			me->MonsterYell(SAY_DEATH, LANG_UNIVERSAL, NULL);
 		}
 
@@ -193,16 +186,43 @@ public:
 		}
 
 	private:
+		void ResetMinions()
+		{
+			DespawnCreatures(NPC_FACELESS);
+			DespawnCreatures(NPC_FACELESS_HC);
+			DespawnCreatures(NPC_FACELESS_PORTAL_STALKER);
+			DespawnCreatures(NPC_TWILIGHT_HATCHLING);
+			RespawnEggs();
+		}
+
 		void DespawnCreatures(uint32 entry)
 		{
 			std::list<Creature*> creatures;
-			GetCreatureListWithEntryInGrid(creatures, me, entry, 300.0f);
+			GetCreatureListWithEntryInGrid(creatures, me, entry, 1000.0f);
 
 			if (creatures.empty())
 				return;
 
 			for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
 				(*iter)->DespawnOrUnsummon();
+		}
+
+		void RespawnEggs()
+		{
+			std::list<Creature*> creatures;
+			GetCreatureListWithEntryInGrid(creatures, me, NPC_ALEXSTRASZAS_EGG, 1000.0f);
+
+			if (creatures.empty())
+				return;
+
+			for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
+			{	
+				if((*iter)->isDead())
+				(*iter)->Respawn();
+
+				(*iter)->SetHealth(77500);
+				(*iter)->SetMaxHealth(77500);
+			}
 		}
 	};
 };
@@ -220,10 +240,13 @@ public:
 
 	struct mob_facelessAI : public ScriptedAI
 	{
-		mob_facelessAI(Creature* creature) : ScriptedAI(creature), pTarget(NULL) {}
+		mob_facelessAI(Creature* creature) : ScriptedAI(creature), pTarget(NULL), isAtAnEgg(false), isCastingUmbraMending (false) {}
 
 		Creature* pTarget;
 		Unit* pErudax;
+
+		bool isAtAnEgg;
+		bool isCastingUmbraMending;
 
 		EventMap events;
 
@@ -235,36 +258,66 @@ public:
 
 			if(pTarget != NULL)
 			{
-				me->GetMotionMaster()->MoveChase(pTarget);
-
-
+				me->GetMotionMaster()->MovePoint(POINT_FACELESS_IS_AT_AN_EGG,pTarget->GetPositionX(),pTarget->GetPositionY(),pTarget->GetPositionZ());
 			}
-			
 
-			//me->SetReactState(REACT_PASSIVE);
-
-			/*			
-			//faceless curruptor
-			events.ScheduleEvent(EVENT_CORRUPTION, 30000);
-			events.ScheduleEvent(EVENT_UMBRALE, 30000);
-			events.ScheduleEvent(EVENT_SIPHON, 30000);
-			*/
-
+			me->SetReactState(REACT_PASSIVE); // That the Faceless are not running to Players while running to Eggs
 		}
 
 		void UpdateAI(const uint32 Diff)
 		{	
-			if (!UpdateVictim())
+			if (pTarget == NULL || !isAtAnEgg || me->HasUnitState(UNIT_STAT_CASTING))
 				return;
 
+			if(isCastingUmbraMending)
+			{	// If the Egg is Death and Umbra Mending was casted go to the next Egg
+
+				pTarget = me->FindNearestCreature(NPC_ALEXSTRASZAS_EGG,1000.0f, true);
+				me->GetMotionMaster()->MovePoint(POINT_FACELESS_IS_AT_AN_EGG,pTarget->GetPositionX(),pTarget->GetPositionY(),pTarget->GetPositionZ());
+				isAtAnEgg = false;
+				isCastingUmbraMending = false;
+
+				return;
+			}
+
+			if(pTarget->isDead())
+			{
+				if(Unit* pErudax = me->FindNearestCreature(BOSS_ERUDAX,1000.0f, true))
+					DoCast(pErudax, SPELL_UMBRAL_MENDING,false);
+
+				isCastingUmbraMending = true;
+
+				return;
+			}
+
+			DoCast(pTarget,SPELL_TWILIGHT_CORRUPTION_DOT,true);
+			DoCast(pTarget,SPELL_TWILIGHT_CORRUPTION_VISUAL,true);
+		}
+
+		void MovementInform(uint32 type, uint32 id)
+		{
+			if (type == POINT_MOTION_TYPE)
+			{
+				switch (id)
+				{
+				case POINT_FACELESS_IS_AT_AN_EGG:
+					isAtAnEgg = true;
+					break;
+
+				default:
+					break;
+				}
+			}
 		}
 
 	private:
 		Creature* GetRandomEgg()
-		{
+		{	
+			//return me->FindNearestCreature(NPC_ALEXSTRASZAS_EGG,1000.0f, true);
+
 			std::list<Creature*> creatures;
 			GetCreatureListWithEntryInGrid(creatures, me, NPC_ALEXSTRASZAS_EGG, 300.0f);
-			
+
 
 			if (creatures.empty())
 				return NULL; // Return the Faceless itself that the Core not crashes
@@ -272,12 +325,10 @@ public:
 			uint32 c = 0;
 			uint32 r = urand(0,creatures.size());
 
-			
-
 			for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
 			{
 				if (c == r)
-				return (*iter);
+					return (*iter);
 
 				c++;
 			}
@@ -301,37 +352,28 @@ public:
 	{
 		mob_alexstraszas_eggsAI(Creature* creature) : Scripted_NoMovementAI(creature)
 		{
-			me->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+			//me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
 
-			//me->SetReactState(REACT_PASSIVE);
+			me->SetReactState(REACT_PASSIVE);
 		}
 
-		void DamageTaken(Unit* attacker, uint32& damage)
-		{
-			if(me->GetHealth() <= damage)
-			{ // Summon Twilight Hatchlings
+		void JustDied(Unit* killer)
+		{	// Summon Twilight Hatchlings
 
-				// Despawn of the Hatchlings is handled by Erudax
-				DoCast(me, SPELL_SUMMON_TWILIGHT_HATCHLINGS, true);
-			}
+			// Despawn of the Hatchlings is handled by Erudax
+			// The behaviour of the hatchlings is handled through SmartAI
+
+			DoCastAOE(SPELL_SUMMON_TWILIGHT_HATCHLINGS, true);
 		}
 
 		void JustSummoned(Creature* summon)
 		{
 			summon->setActive(true);
 			summon->AI()->DoZoneInCombat();
+
+			if (GetPlayerAtMinimumRange(0))
+				summon->Attack(GetPlayerAtMinimumRange(0), true);
 		}
-
-		void KilledUnit(Unit* victim)
-		{
-			if (victim->GetEntry() == NPC_ALEXSTRASZAS_EGG)
-			{
-				if(Unit* pErudax = me->FindNearestCreature(BOSS_ERUDAX,1000.0f, true))
-					DoCast(pErudax, SPELL_UMBRAL_MENDING,true);
-			}
-		}
-
-
 	};
 };
 
