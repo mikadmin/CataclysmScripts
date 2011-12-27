@@ -44,8 +44,10 @@ enum Spells
 	SPELL_SPAWN_FACELESS        = 75704, // Spawns 1 (NH - 40600) or 2 (HC - 48844) Faceless 
 	SPELL_TWILIGHT_PORTAL_VISUAL = 95716,
 
+	SPELL_SHIELD_OF_NIGHTMARE = 75809, // In this Script is is casted by the Faceless itself
+
 	// Faceless
-	SPELL_UMBRAL_MENDING			= 75763,
+	SPELL_UMBRAL_MENDING			= 79467, // Wowhead is worng
 	SPELL_TWILIGHT_CORRUPTION_DOT	= 93613,
 	SPELL_TWILIGHT_CORRUPTION_VISUAL = 91049,
 
@@ -75,7 +77,6 @@ enum Points
 {
 	POINT_FACELESS_IS_AT_AN_EGG = 1,
 };
-
 
 class boss_erudax: public CreatureScript
 {
@@ -178,10 +179,6 @@ public:
 
 		void JustSummoned(Creature* summon)
 		{
-			/*pSummoned->SetInCombatWithZone();
-			if (Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM,0))
-			pSummoned->AI()->AttackStart(pTarget);
-			*/
 			summon->setActive(true);
 		}
 
@@ -220,8 +217,8 @@ public:
 				if((*iter)->isDead())
 				(*iter)->Respawn();
 
-				(*iter)->SetHealth(77500);
-				(*iter)->SetMaxHealth(77500);
+				//(*iter)->SetHealth(77500);
+				//(*iter)->SetMaxHealth(77500);
 			}
 		}
 	};
@@ -255,6 +252,9 @@ public:
 			pTarget = GetRandomEgg();
 
 			DoZoneInCombat();
+
+			if(me->GetMap()->IsHeroic())
+				DoCast(me, SPELL_SHIELD_OF_NIGHTMARE, true);
 
 			if(pTarget != NULL)
 			{
@@ -322,7 +322,7 @@ public:
 
 
 			if (creatures.empty())
-				return NULL; // Return the Faceless itself that the Core not crashes
+				return NULL;
 
 			uint32 c = 0;
 			uint32 r = urand(0,creatures.size());
