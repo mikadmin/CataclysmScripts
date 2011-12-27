@@ -145,7 +145,7 @@ public:
 				case EVENT_SUMMON_FACELESS:
 					//Adds a visual effect to the Stalker
 					FacelessPortalStalker->GetAI()->DoCast(FacelessPortalStalker,SPELL_TWILIGHT_PORTAL_VISUAL,true);
-					events.ScheduleEvent(EVENT_REMOVE_TWILIGHT_PORTAL, 4000);
+					events.ScheduleEvent(EVENT_REMOVE_TWILIGHT_PORTAL, 7000);
 
 					FacelessPortalStalker->GetAI()->DoCast(FacelessPortalStalker,SPELL_SPAWN_FACELESS,true);
 					break;
@@ -290,6 +290,8 @@ public:
 				return;
 			}
 
+			pTarget->AI()->DoZoneInCombat();
+
 			DoCast(pTarget,SPELL_TWILIGHT_CORRUPTION_DOT,true);
 			DoCast(pTarget,SPELL_TWILIGHT_CORRUPTION_VISUAL,true);
 		}
@@ -343,16 +345,16 @@ class mob_alexstraszas_eggs : public CreatureScript
 public:
 	mob_alexstraszas_eggs() : CreatureScript("mob_alexstraszas_eggs") { }
 
-	Scripted_NoMovementAI* GetAI(Creature* creature) const
+	CreatureAI* GetAI(Creature* creature) const
 	{
 		return new mob_alexstraszas_eggsAI (creature);
 	}
 
-	struct mob_alexstraszas_eggsAI : public Scripted_NoMovementAI
+	struct mob_alexstraszas_eggsAI : public ScriptedAI
 	{
-		mob_alexstraszas_eggsAI(Creature* creature) : Scripted_NoMovementAI(creature)
+		mob_alexstraszas_eggsAI(Creature* creature) : ScriptedAI(creature)
 		{
-			//me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 
 			me->SetReactState(REACT_PASSIVE);
 		}
