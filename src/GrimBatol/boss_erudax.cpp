@@ -21,13 +21,13 @@
 
 /**********
 * Script Coded by Naios
-* Spell & Definitions by Dreadii
-* Script Complete 20% (or less)
+* Script Complete 70% (or less)
 **********/
 
 #include "ScriptPCH.h"
 #include "grim_batol.h"
 
+// ToDo move the Yells to the DB
 #define SAY_AGGRO "The darkest days are still ahead!"
 #define	SAY_DEATH "Ywaq maq oou; ywaq maq ssaggh. Yawq ma shg'fhn."
 #define SAY_SUMMON "Come, suffering... Enter, chaos!"
@@ -36,41 +36,43 @@
 
 enum Spells
 {
-	//Erudax
-	SPELL_ENFEEBLING_BLOW		= 75789,
-	SPELL_SHADOW_GALE_VISUAL	= 75664,
-	SPELL_SHADOW_GALE_SPEED_TRIGGER = 75675, // (litte hole at the caster, it is a pre visual aura of shadow gale) 
+	// Erudax
+	SPELL_ENFEEBLING_BLOW				= 75789,
+	SPELL_SHADOW_GALE_VISUAL			= 75664,
 
-	SPELL_SPAWN_FACELESS        = 75704, // Spawns 1 (NH - 40600) or 2 (HC - 48844) Faceless 
-	SPELL_TWILIGHT_PORTAL_VISUAL = 95716,
+	// (litte hole at the caster, it is a pre visual aura of shadow gale) 
+	SPELL_SHADOW_GALE_SPEED_TRIGGER		= 75675,
 
-	SPELL_SHIELD_OF_NIGHTMARE = 75809, // In this Script is is casted by the Faceless itself
+	// Spawns 1 (NH - 40600) or 2 (HC - 48844) Faceless 
+	SPELL_SPAWN_FACELESS				= 75704,
+	SPELL_TWILIGHT_PORTAL_VISUAL		= 95716,
+
+	// In this Script is is casted by the Faceless itself
+	SPELL_SHIELD_OF_NIGHTMARE			= 75809,
+
+	SPELL_BINDING_SHADOWS				= 79466, // Wowhead is wrong
+	SPELL_BINDING_SHADOWS_AURA			= 0,
 
 	// Faceless
-	SPELL_UMBRAL_MENDING			= 79467, // Wowhead is worng
-	SPELL_TWILIGHT_CORRUPTION_DOT	= 93613,
-	SPELL_TWILIGHT_CORRUPTION_VISUAL = 91049,
+	SPELL_UMBRAL_MENDING				= 79467, // Wowhead is wrong
+	SPELL_TWILIGHT_CORRUPTION_DOT		= 93613,
+	SPELL_TWILIGHT_CORRUPTION_VISUAL	= 91049,
+
+	// Maybe another possible Spell replacement for Twilight Corruption
+	// SPELL_SIPHON         = 75755,
 
 	// Alexstraszas Eggs
 	SPELL_SUMMON_TWILIGHT_HATCHLINGS = 91058,
-
-	// OLD
-
-	SPELL_PLAGUE         = 82622,    //seuche der zeitalter
-	SPELL_ORKAN          = 75664,    //schattenorkan
-	SPELL_SPAWN          = 75704,    //gesichtslosen beschwören
-	//Faceless curruptor
-	SPELL_CORRUPTION     = 75520,
-	SPELL_UMBRALE        = 75763,
-	SPELL_SIPHON         = 75755,
 };
 
 enum Events
 {
-	EVENT_ENFEEBLING_BLOW		= 1,
-	EVENT_SHADOW_GALE			= 2,
-	EVENT_SUMMON_FACELESS		= 3,
-	EVENT_REMOVE_TWILIGHT_PORTAL = 4,
+	EVENT_ENFEEBLING_BLOW					= 1,
+	EVENT_SHADOW_GALE						= 2,
+	EVENT_SUMMON_FACELESS					= 3,
+	EVENT_REMOVE_TWILIGHT_PORTAL			= 4,
+	EVENT_CAST_SHIELD_OF_NIGHTMARE_DELAY	= 5,
+	EVENT_BINDING_SHADOWS					= 6,
 };
 
 enum Points
@@ -101,7 +103,7 @@ public:
 
 		InstanceScript* pInstance;
 		EventMap events;
-		
+
 		void Reset()
 		{
 			events.Reset();
@@ -113,9 +115,17 @@ public:
 		{
 			//events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, 5000);
 
-			events.ScheduleEvent(EVENT_SUMMON_FACELESS, 5000);
+			// After every Shadow Gale
+			//events.ScheduleEvent(EVENT_SUMMON_FACELESS, 20000);
+
+			events.ScheduleEvent(EVENT_BINDING_SHADOWS, 5000);
 
 			me->MonsterYell(SAY_AGGRO, LANG_UNIVERSAL, NULL);
+
+			// The Position of the Portal Stalker is the Summon Position of the Adds
+
+			// Blizzlike Position: -641.515f,-827.8f,235.5f,3.069f
+			// The non Blizzlike Position is Insert for testing Reasons
 
 			FacelessPortalStalker = me->SummonCreature(NPC_FACELESS_PORTAL_STALKER,-680.8f,-826.9f,233.1f,0,TEMPSUMMON_MANUAL_DESPAWN);
 
@@ -145,6 +155,10 @@ public:
 
 				case EVENT_SUMMON_FACELESS:
 					//Adds a visual effect to the Stalker
+
+					if (!(rand()%2))
+						me->MonsterYell(SAY_SUMMON, LANG_UNIVERSAL, NULL);
+
 					FacelessPortalStalker->GetAI()->DoCast(FacelessPortalStalker,SPELL_TWILIGHT_PORTAL_VISUAL,true);
 					events.ScheduleEvent(EVENT_REMOVE_TWILIGHT_PORTAL, 7000);
 
@@ -154,6 +168,13 @@ public:
 				case EVENT_REMOVE_TWILIGHT_PORTAL:
 					//Removes Portal effect from Stalker
 					FacelessPortalStalker->RemoveAllAuras();
+					break;
+
+				case EVENT_BINDING_SHADOWS:
+
+					if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500.0f, true))
+						DoCast(tempTarget,SPELL_BINDING_SHADOWS);
+
 					break;
 
 				default:
@@ -215,15 +236,14 @@ public:
 			for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
 			{	
 				if((*iter)->isDead())
-				(*iter)->Respawn();
+					(*iter)->Respawn();
 
-				//(*iter)->SetHealth(77500);
-				//(*iter)->SetMaxHealth(77500);
+				(*iter)->SetHealth(77500);
+				(*iter)->SetMaxHealth(77500);
 			}
 		}
 	};
 };
-
 
 class mob_faceless : public CreatureScript
 {
@@ -254,20 +274,35 @@ public:
 			DoZoneInCombat();
 
 			if(me->GetMap()->IsHeroic())
-				DoCast(me, SPELL_SHIELD_OF_NIGHTMARE, true);
+				events.ScheduleEvent(EVENT_CAST_SHIELD_OF_NIGHTMARE_DELAY, 3000);
 
 			if(pTarget != NULL)
 			{
-				me->GetMotionMaster()->MovePoint(POINT_FACELESS_IS_AT_AN_EGG,pTarget->GetPositionX(),pTarget->GetPositionY(),pTarget->GetPositionZ());
+				me->GetMotionMaster()->MovePoint(POINT_FACELESS_IS_AT_AN_EGG,pTarget->GetPositionX()-4.0f,pTarget->GetPositionY()-4.0f,pTarget->GetPositionZ());
 			}
 
 			me->SetReactState(REACT_PASSIVE); // That the Faceless are not running to Players while running to Eggs
 		}
 
-		void UpdateAI(const uint32 Diff)
+		void UpdateAI(const uint32 diff)
 		{	
 			if (pTarget == NULL || !isAtAnEgg || me->HasUnitState(UNIT_STAT_CASTING))
 				return;
+
+			events.Update(diff);
+
+			while (uint32 eventId = events.ExecuteEvent())
+			{
+				switch (eventId)
+				{
+				case EVENT_CAST_SHIELD_OF_NIGHTMARE_DELAY:
+					DoCast(me, SPELL_SHIELD_OF_NIGHTMARE, true);
+					break;
+
+				default:
+					break;
+				}
+			}
 
 			if(isCastingUmbraMending)
 			{	// If the Egg is Death and Umbra Mending was casted go to the next Egg
@@ -312,10 +347,16 @@ public:
 			}
 		}
 
+		void JustDied(Unit* killer)
+		{	// Removes the Dot of the Egg if the Faceless dies
+			if(isAtAnEgg && pTarget->isAlive())
+				pTarget->RemoveAllAuras();
+		}
+
 	private:
 		Creature* GetRandomEgg()
 		{	
-			//return me->FindNearestCreature(NPC_ALEXSTRASZAS_EGG,1000.0f, true);
+			// I know that this is looking strange but it works! ^^
 
 			std::list<Creature*> creatures;
 			GetCreatureListWithEntryInGrid(creatures, me, NPC_ALEXSTRASZAS_EGG, 300.0f);
@@ -379,9 +420,59 @@ public:
 	};
 };
 
+class spell_binding_shadows : public SpellScriptLoader
+{
+public:
+	spell_binding_shadows() : SpellScriptLoader("spell_binding_shadows") { }
+
+	class spell_binding_shadows_SpellScript : public SpellScript
+	{
+		PrepareSpellScript(spell_binding_shadows_SpellScript)
+
+			bool Validate(SpellEntry const * spellEntry) {return false;}
+
+		bool Load() {return true;}
+
+		void Unload() {}
+
+		void HandleDummy(SpellEffIndex /*effIndex*/)
+		{
+
+			sLog->outString("SPELL_EFFECT_DUMMY is executed on target!");
+
+			if (Unit * target = GetHitUnit())
+			{
+				GetCaster()->CastSpell(target, SPELL_BINDING_SHADOWS_AURA, true);
+
+				Map::PlayerList const &PlayerList =  target->GetMap()->GetPlayers();
+
+				if (!PlayerList.isEmpty())
+				{
+					for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
+						if(target != i->getSource())
+							if(target->GetDistance(i->getSource()) < 5)
+								GetCaster()->CastSpell(target, SPELL_BINDING_SHADOWS_AURA, true);
+				}
+
+			}
+		}
+
+		void Register()
+		{
+			OnEffect += SpellEffectFn(spell_binding_shadows_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);        
+		}
+	};
+
+	SpellScript *GetSpellScript() const
+	{
+		return new spell_binding_shadows_SpellScript();
+	}
+};
+
 void AddSC_boss_erudax() 
 {
 	new boss_erudax();
 	new mob_faceless();
 	new mob_alexstraszas_eggs();
+	//new spell_binding_shadows();
 }

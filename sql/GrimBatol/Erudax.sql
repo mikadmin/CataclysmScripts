@@ -8,12 +8,16 @@ UPDATE `creature_template` SET `ScriptName`='mob_faceless' WHERE `entry`=40600 L
 UPDATE `creature_template` SET `ScriptName`='mob_faceless' WHERE `entry`=48844 LIMIT 1;
 UPDATE `creature_template` SET `ScriptName`='mob_alexstraszas_eggs' WHERE `entry`=40486 LIMIT 1;
 
+-- Erudax
 -- The Waypoint of Erudax are not Blizzlike!!!!
 -- On the Blizz Servers Erudax is standing still in the Room
 DELETE FROM `creature_addon` WHERE `guid`=@ERUDAX_GUID LIMIT 1;
 DELETE FROM `waypoint_data` WHERE `id`=10000310;
 
 UPDATE `creature` SET `position_x`= -777.094, `position_y`=-825.152, `position_z`=233.233, `orientation`=0 WHERE `guid`= @ERUDAX_GUID LIMIT 1;
+
+-- Faction fix for Difficult entry 2 (now he can be healed with Umbral Mending on Heroic Mode)
+UPDATE `creature_template` SET `faction_A`=16, `faction_H`=16 WHERE `entry`=48822 LIMIT 1;
 
 -- Faceless Corruptor
 -- Faction & Level fix
