@@ -1,15 +1,27 @@
 Progress Bar:
 
-Firelands Instance Script: 30% Complete (or less)
+Dungeons:
+Grim Batol
+Forgemaster Throngus: 50% Complete (or less) - In Development
+Drahga Shadowburner: 90% Complete (or less) - Released
+Erudax: 90% Complete (or less) - Released
+
+Raids:
+Firelands
+Instance Script: 30% Complete (or less)
 Shannox: ~80% Complete (or less)
 Bethilac: ~10% Complete (or less)
 Majordomo Staghelm: ~25% Complete (or less)
 
 
 This Cataclysm Scripts are working with the most Cataclysm EMU´s
-(Currently they are Developed with TrilliumEMU)
+(Currently they are Developed with TrilliumEMU (4.2a Scripts) and ArkCore (4.06a Scripts) )
 
 Some of this Repo Scripts are only fixed by me, not coded!
 If i forgot to mention you in the credit list don`t hesitate to contact me.
+
+The Repo is open for every Dev.
+But if you use a Script it would be nice if you commit your
+own fixes of my Scripts to this Repo.
 
 Naios (naios-dev@live.de)
