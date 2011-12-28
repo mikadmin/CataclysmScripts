@@ -21,8 +21,14 @@
 
 /**********
 * Script Coded by Naios
-* Script Complete 70% (or less)
+* Script Complete 85% (or less)
 **********/
+
+/* ToDo:
+- Damage of Shadow Gale needs to be fixed
+- Shadow Gale debuff has to be displayed
+- Correct the Spell of the Twilight Hatchlings in SAI Script (Their damage is too high)
+*/
 
 #include "ScriptPCH.h"
 #include "grim_batol.h"
@@ -42,6 +48,7 @@ enum Spells
 
 	// (litte hole at the caster, it is a pre visual aura of shadow gale) 
 	SPELL_SHADOW_GALE_SPEED_TRIGGER		= 75675,
+	SPELL_SHADOW_GALE_DEBUFF			= 75694,
 
 	// Spawns 1 (NH - 40600) or 2 (HC - 48844) Faceless 
 	SPELL_SPAWN_FACELESS				= 75704,
@@ -51,15 +58,11 @@ enum Spells
 	SPELL_SHIELD_OF_NIGHTMARE			= 75809,
 
 	SPELL_BINDING_SHADOWS				= 79466, // Wowhead is wrong
-	SPELL_BINDING_SHADOWS_AURA			= 0,
 
 	// Faceless
 	SPELL_UMBRAL_MENDING				= 79467, // Wowhead is wrong
 	SPELL_TWILIGHT_CORRUPTION_DOT		= 93613,
-	SPELL_TWILIGHT_CORRUPTION_VISUAL	= 91049,
-
-	// Maybe another possible Spell replacement for Twilight Corruption
-	// SPELL_SIPHON         = 75755,
+	SPELL_TWILIGHT_CORRUPTION_VISUAL	= 75755, //91049,
 
 	// Alexstraszas Eggs
 	SPELL_SUMMON_TWILIGHT_HATCHLINGS = 91058,
@@ -73,11 +76,22 @@ enum Events
 	EVENT_REMOVE_TWILIGHT_PORTAL			= 4,
 	EVENT_CAST_SHIELD_OF_NIGHTMARE_DELAY	= 5,
 	EVENT_BINDING_SHADOWS					= 6,
+
+	EVENT_TRIGGER_GALE_CHECK_PLAYERS		= 7,
 };
 
 enum Points
 {
 	POINT_FACELESS_IS_AT_AN_EGG = 1,
+	POINT_ERUDAX_IS_AT_STALKER	= 2,
+};
+
+enum ShadowGalePorgressState
+{
+	STATE_NOT_IN_PROGRESS	= 0,
+	STATE_EXECUTING_INTRO	= 1,
+	STATE_IN_PROGRESS		= 2,
+	STATE_SUMMON_ADS		= 3,
 };
 
 class boss_erudax: public CreatureScript
@@ -92,42 +106,48 @@ public:
 
 	struct boss_erudaxAI : public ScriptedAI
 	{
-		boss_erudaxAI(Creature* pCreature) : ScriptedAI(pCreature)
+		boss_erudaxAI(Creature* pCreature) : ScriptedAI(pCreature), ShouldSummonAdds(false)
 		{
 			pInstance = pCreature->GetInstanceScript();
-
-			RespawnEggs();
 		}
 
 		Unit* FacelessPortalStalker;
+		Unit* ShadowGaleTrigger;
 
 		InstanceScript* pInstance;
 		EventMap events;
 
+		bool ShouldSummonAdds;
+
 		void Reset()
 		{
+			me->GetMotionMaster()->MoveTargetedHome();
+
 			events.Reset();
 
 			ResetMinions();
+			RemoveShadowGaleDebuffFromPlayers();
 		}
 
 		void EnterCombat(Unit* /*who*/) 
 		{
-			//events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, 5000);
+			ShouldSummonAdds = false;
 
-			// After every Shadow Gale
-			//events.ScheduleEvent(EVENT_SUMMON_FACELESS, 20000);
+			// Fixes wrong behaviour of Erudax if the boss was respawned
+			me->SetReactState(REACT_AGGRESSIVE);
+			me->GetMotionMaster()->Clear();
+			me->GetMotionMaster()->MoveChase(me->getVictim());
+
+			events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, 8000);
 
 			events.ScheduleEvent(EVENT_BINDING_SHADOWS, 5000);
+
+			events.ScheduleEvent(EVENT_SHADOW_GALE, 20000);
 
 			me->MonsterYell(SAY_AGGRO, LANG_UNIVERSAL, NULL);
 
 			// The Position of the Portal Stalker is the Summon Position of the Adds
-
-			// Blizzlike Position: -641.515f,-827.8f,235.5f,3.069f
-			// The non Blizzlike Position is Insert for testing Reasons
-
-			FacelessPortalStalker = me->SummonCreature(NPC_FACELESS_PORTAL_STALKER,-680.8f,-826.9f,233.1f,0,TEMPSUMMON_MANUAL_DESPAWN);
+			FacelessPortalStalker = me->SummonCreature(NPC_FACELESS_PORTAL_STALKER,-641.515f,-827.8f,235.5f,3.069f,TEMPSUMMON_MANUAL_DESPAWN);
 
 			FacelessPortalStalker->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 		}
@@ -136,6 +156,31 @@ public:
 		{
 			if (!UpdateVictim() || me->HasUnitState(UNIT_STAT_CASTING))
 				return;
+
+			if(ShouldSummonAdds)
+			{
+				// Despawns the Stalker
+				DespawnCreatures(NPC_SHADOW_GALE_STALKER);
+				RemoveShadowGaleDebuffFromPlayers();
+
+				me->GetMotionMaster()->Clear();
+				me->GetMotionMaster()->MoveChase(me->getVictim());
+
+				if ((rand()%2))
+					me->MonsterYell(SAY_SUMMON, LANG_UNIVERSAL, NULL);
+
+				//Adds a visual portal effect to the Stalker
+				FacelessPortalStalker->GetAI()->DoCast(FacelessPortalStalker,SPELL_TWILIGHT_PORTAL_VISUAL,true);
+				events.ScheduleEvent(EVENT_REMOVE_TWILIGHT_PORTAL, 7000);
+
+				//Summons Faceless over the Spell
+				FacelessPortalStalker->GetAI()->DoCast(FacelessPortalStalker,SPELL_SPAWN_FACELESS,true);
+
+				ShouldSummonAdds = false;
+
+				// DBM says that the Spell has 40s CD
+				events.ScheduleEvent(EVENT_SHADOW_GALE, 40000);
+			}
 
 			events.Update(diff);
 
@@ -150,19 +195,9 @@ public:
 					break;
 
 				case EVENT_SHADOW_GALE:
-					DoCast(SPELL_SHADOW_GALE_VISUAL);
-					break;
-
-				case EVENT_SUMMON_FACELESS:
-					//Adds a visual effect to the Stalker
-
-					if (!(rand()%2))
-						me->MonsterYell(SAY_SUMMON, LANG_UNIVERSAL, NULL);
-
-					FacelessPortalStalker->GetAI()->DoCast(FacelessPortalStalker,SPELL_TWILIGHT_PORTAL_VISUAL,true);
-					events.ScheduleEvent(EVENT_REMOVE_TWILIGHT_PORTAL, 7000);
-
-					FacelessPortalStalker->GetAI()->DoCast(FacelessPortalStalker,SPELL_SPAWN_FACELESS,true);
+					ShadowGaleTrigger = me->SummonCreature(NPC_SHADOW_GALE_STALKER,-739.665f/*+(urand(0,20)-10)*/,-827.024f/*+(urand(0,20)-10)*/,232.412f,3.1f,TEMPSUMMON_CORPSE_DESPAWN);
+					me->SetReactState(REACT_PASSIVE);
+					me->GetMotionMaster()->MovePoint(POINT_ERUDAX_IS_AT_STALKER,ShadowGaleTrigger->GetPositionX(),ShadowGaleTrigger->GetPositionY(),ShadowGaleTrigger->GetPositionZ());
 					break;
 
 				case EVENT_REMOVE_TWILIGHT_PORTAL:
@@ -175,6 +210,7 @@ public:
 					if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500.0f, true))
 						DoCast(tempTarget,SPELL_BINDING_SHADOWS);
 
+					events.ScheduleEvent(EVENT_BINDING_SHADOWS, 15000);
 					break;
 
 				default:
@@ -195,12 +231,36 @@ public:
 		{	
 			ResetMinions();
 
+			RemoveShadowGaleDebuffFromPlayers();
+
 			me->MonsterYell(SAY_DEATH, LANG_UNIVERSAL, NULL);
 		}
 
 		void JustSummoned(Creature* summon)
 		{
 			summon->setActive(true);
+		}
+
+		void MovementInform(uint32 type, uint32 id)
+		{
+			if (type == POINT_MOTION_TYPE)
+			{
+				switch (id)
+				{
+				case POINT_ERUDAX_IS_AT_STALKER:
+
+					// if Erudax is not at the Stalkers poision while he is casting
+					// the Casting Effect would not displayed right
+					me->SetReactState(REACT_AGGRESSIVE);
+					DoCast(me,SPELL_SHADOW_GALE_VISUAL);
+					ShouldSummonAdds = true;
+
+					break;
+
+				default:
+					break;
+				}
+			}
 		}
 
 	private:
@@ -210,6 +270,7 @@ public:
 			DespawnCreatures(NPC_FACELESS_HC);
 			DespawnCreatures(NPC_FACELESS_PORTAL_STALKER);
 			DespawnCreatures(NPC_TWILIGHT_HATCHLING);
+			DespawnCreatures(NPC_SHADOW_GALE_STALKER);
 			RespawnEggs();
 		}
 
@@ -240,6 +301,17 @@ public:
 
 				(*iter)->SetHealth(77500);
 				(*iter)->SetMaxHealth(77500);
+			}
+		}
+
+		void RemoveShadowGaleDebuffFromPlayers()
+		{
+			Map::PlayerList const &PlayerList =  me->GetMap()->GetPlayers();
+
+			if (!PlayerList.isEmpty())
+			{
+				for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
+						i->getSource()->RemoveAura(SPELL_SHADOW_GALE_DEBUFF);
 			}
 		}
 	};
@@ -307,8 +379,11 @@ public:
 			if(isCastingUmbraMending)
 			{	// If the Egg is Death and Umbra Mending was casted go to the next Egg
 
-				pTarget = me->FindNearestCreature(NPC_ALEXSTRASZAS_EGG,1000.0f, true);
-				me->GetMotionMaster()->MovePoint(POINT_FACELESS_IS_AT_AN_EGG,pTarget->GetPositionX(),pTarget->GetPositionY(),pTarget->GetPositionZ());
+				pTarget = GetNextEgg();
+
+				if(pTarget != NULL) // Solves Crashes if the Faceless killed all eggs
+					me->GetMotionMaster()->MovePoint(POINT_FACELESS_IS_AT_AN_EGG,pTarget->GetPositionX(),pTarget->GetPositionY(),pTarget->GetPositionZ());
+
 				isAtAnEgg = false;
 				isCastingUmbraMending = false;
 
@@ -363,7 +438,7 @@ public:
 
 
 			if (creatures.empty())
-				return NULL;
+				return GetNextEgg();
 
 			uint32 c = 0;
 			uint32 r = urand(0,creatures.size());
@@ -376,7 +451,12 @@ public:
 				c++;
 			}
 
-			return NULL;
+			return GetNextEgg();
+		}
+
+		inline Creature* GetNextEgg()
+		{
+			return me->FindNearestCreature(NPC_ALEXSTRASZAS_EGG,1000.0f, true);
 		}
 	};
 };
@@ -420,53 +500,73 @@ public:
 	};
 };
 
-class spell_binding_shadows : public SpellScriptLoader
+class mob_shadow_gale_stalker : public CreatureScript
 {
 public:
-	spell_binding_shadows() : SpellScriptLoader("spell_binding_shadows") { }
+	mob_shadow_gale_stalker() : CreatureScript("mob_shadow_gale_stalker") { }
 
-	class spell_binding_shadows_SpellScript : public SpellScript
+	CreatureAI* GetAI(Creature* creature) const
 	{
-		PrepareSpellScript(spell_binding_shadows_SpellScript)
+		return new mob_shadow_gale_stalkerAI (creature);
+	}
 
-			bool Validate(SpellEntry const * spellEntry) {return false;}
+	struct mob_shadow_gale_stalkerAI : public ScriptedAI
+	{
+		mob_shadow_gale_stalkerAI(Creature* creature) : ScriptedAI(creature), VisualEffectCasted(false) {}
 
-		bool Load() {return true;}
+		Unit* pErudax;
+		EventMap events;
+		bool VisualEffectCasted;
 
-		void Unload() {}
-
-		void HandleDummy(SpellEffIndex /*effIndex*/)
+		void IsSummonedBy(Unit* summoner)
 		{
+			pErudax = summoner;
+			me->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+			DoCastAOE(SPELL_SHADOW_GALE_SPEED_TRIGGER);
+		}
 
-			sLog->outString("SPELL_EFFECT_DUMMY is executed on target!");
-
-			if (Unit * target = GetHitUnit())
+		void UpdateAI(const uint32 diff)
+		{	
+			if(VisualEffectCasted)
 			{
-				GetCaster()->CastSpell(target, SPELL_BINDING_SHADOWS_AURA, true);
+				events.Update(diff);
 
-				Map::PlayerList const &PlayerList =  target->GetMap()->GetPlayers();
-
-				if (!PlayerList.isEmpty())
+				while (uint32 eventId = events.ExecuteEvent())
 				{
-					for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
-						if(target != i->getSource())
-							if(target->GetDistance(i->getSource()) < 5)
-								GetCaster()->CastSpell(target, SPELL_BINDING_SHADOWS_AURA, true);
-				}
+					switch (eventId)
+					{
+					case EVENT_TRIGGER_GALE_CHECK_PLAYERS:
 
+						Map::PlayerList const &PlayerList =  me->GetMap()->GetPlayers();
+
+						if (!PlayerList.isEmpty())
+						{
+							for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
+								if(me->GetDistance(i->getSource()) >= 3)
+								{
+									// ToDo Add Debuff and Deal damage
+									if(!i->getSource()->HasAura(SPELL_SHADOW_GALE_DEBUFF))
+										me->CastSpell(i->getSource(), SPELL_SHADOW_GALE_DEBUFF, true);
+								}else
+									i->getSource()->RemoveAura(SPELL_SHADOW_GALE_DEBUFF);
+						}
+
+						events.ScheduleEvent(EVENT_TRIGGER_GALE_CHECK_PLAYERS, 1000);
+						break;
+					}
+				}
+			}
+
+			if (me->HasUnitState(UNIT_STAT_CASTING))
+				return;
+
+			if(!VisualEffectCasted)
+			{
+				VisualEffectCasted = true;
+				events.ScheduleEvent(EVENT_TRIGGER_GALE_CHECK_PLAYERS, 1000);
 			}
 		}
-
-		void Register()
-		{
-			OnEffect += SpellEffectFn(spell_binding_shadows_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);        
-		}
 	};
-
-	SpellScript *GetSpellScript() const
-	{
-		return new spell_binding_shadows_SpellScript();
-	}
 };
 
 void AddSC_boss_erudax() 
@@ -474,5 +574,5 @@ void AddSC_boss_erudax()
 	new boss_erudax();
 	new mob_faceless();
 	new mob_alexstraszas_eggs();
-	//new spell_binding_shadows();
+	new mob_shadow_gale_stalker();
 }

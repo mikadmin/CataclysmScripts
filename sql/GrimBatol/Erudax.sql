@@ -7,6 +7,7 @@ SET @ERUDAX_GUID := 1051910;
 UPDATE `creature_template` SET `ScriptName`='mob_faceless' WHERE `entry`=40600 LIMIT 1;
 UPDATE `creature_template` SET `ScriptName`='mob_faceless' WHERE `entry`=48844 LIMIT 1;
 UPDATE `creature_template` SET `ScriptName`='mob_alexstraszas_eggs' WHERE `entry`=40486 LIMIT 1;
+UPDATE `creature_template` SET `ScriptName`='mob_shadow_gale_stalker' WHERE `entry`=40567 LIMIT 1;
 
 -- Erudax
 -- The Waypoint of Erudax are not Blizzlike!!!!
@@ -84,3 +85,7 @@ UPDATE `creature_template` SET `scale`=3 WHERE `entry`=44314 LIMIT 1;
 
 -- Makes the Stalker Invisible
 UPDATE `creature_template` SET `modelid1`=11686, `modelid2`=0 WHERE `entry`=44314 LIMIT 1;
+
+-- Shadow Gale Stalker
+-- Makes the Stalker Invisible
+UPDATE `creature_template` SET `modelid1`=11686, `modelid2`=0 WHERE `entry`=40567 LIMIT 1;
