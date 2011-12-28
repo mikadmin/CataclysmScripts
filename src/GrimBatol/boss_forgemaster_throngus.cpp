@@ -35,20 +35,9 @@
 
 enum Spells
 {
-	SPELL_BOUCLIER = 90830, // Bouclier incendiaire
-
-	SPELL_PHALANGE = 74908, // Phalange individuelle
-	SPELL_ROSSER = 47480, // Rosser
-	SPELL_LAME = 74981, // Double-lames // Doppelklingen
-	SPELL_RUGIS = 74976, // Rugissement désorientant // Desorientierendes Gebrüll
-	SPELL_GERBE = 90754, // Gerbe de lave // 
-	SPELL_ENCOMBRE = 75007, // Encombré // Beeinträchtigt
-	SPELL_HEURT = 75056, // Heurt d’empalement // Pfählerndes Schmettern
-
-
 	// Misc
-	SPELL_MIGHTY_STOMP = 74984, // Stomp
-	SPELL_PICK_WEAPON = 75000, // He switches his weapon
+	SPELL_MIGHTY_STOMP = 74984,
+	SPELL_PICK_WEAPON = 75000, // He switches his weapon (DBM Announce)
 
 	// Shield Phase
 	SPELL_FLAMING_ARROW = 45101,
@@ -78,10 +67,10 @@ enum Events
 	EVENT_PERSONAL_PHALANX = 3,
 
 	// Swords Phase
+	EVENT_DISORIENTING_ROAR = 4,
 
 	// Mace Phase
-
-	EVENT_IMPALING_SLAM = 4,
+	EVENT_IMPALING_SLAM = 5,
 
 };
 
@@ -139,6 +128,8 @@ public:
 		{
 			currentWaepon = WEAPON_NON;
 			DespawnCreatures(NPC_FIRE_PATCH);
+
+			SetEquipmentSlots(false, 0, 0,0);
 		}
 
 		void UpdateAI(const uint32 diff)
@@ -191,6 +182,11 @@ public:
 					events.ScheduleEvent(EVENT_IMPALING_SLAM, 15000);
 					break;
 
+				case EVENT_DISORIENTING_ROAR:
+
+					DoCastAOE(SPELL_DISORIENTING_ROAR);
+
+					events.ScheduleEvent(EVENT_DISORIENTING_ROAR, 11000);
 				default:
 					break;
 				}
@@ -209,15 +205,24 @@ public:
 				summon->CastSpell(summon, SPELL_LAVA_PATCH_VISUAL, true);
 		}
 
+		void DamageDealt(Unit* victim, uint32& damage, DamageEffectType /*damageType*/)
+		{
+			if(me->GetMap()->IsHeroic() && damage > 0)
+				me->CastSpell(me->getVictim(), SPELL_BURNING_FLAMES, true);
+		}
+
 	private:
-		void IntializeWeapon()
+		inline void IntializeWeapon()
 		{ // Intialize next Phase
 
+
+
+
 			// Choose Weapon
-			currentWaepon = urand(2,4);
+			currentWaepon = GetNextPhase();
 
 			// If you want to test Phases you can overwrite the rand value here
-			currentWaepon = WEAPON_MACE;
+			currentWaepon = WEAPON_SWORDS;
 
 			switch(currentWaepon)
 			{
@@ -238,13 +243,15 @@ public:
 
 				SetEquipmentSlots(false, EQUIPMENT_ID_SWORD, EQUIPMENT_ID_SWORD,0);
 
+				events.ScheduleEvent(EVENT_DISORIENTING_ROAR, 11000);
+
 				break;
 
 			case WEAPON_MACE:
 
 				if(me->GetMap()->IsHeroic())
 					DoCast(me, SPELL_LAVA_PATCH, true);
-				
+
 				DoCast(me, SPELL_ENCUMBERED, true);
 
 				SetEquipmentSlots(false, EQUIPMENT_ID_MACE, 0,0);
@@ -256,7 +263,7 @@ public:
 
 		}
 
-		void ResetWeapon()
+		inline void ResetWeapon()
 		{ // Resets last Phase
 
 			events.Reset();
@@ -274,6 +281,40 @@ public:
 			me->RemoveAura(SPELL_LAVA_PATCH);
 			me->RemoveAura(SPELL_ENCUMBERED);
 
+		}
+
+		inline uint8 GetNextPhase()
+		{
+			// zit. Wowhead
+			// The three weapon phases will switch randomly,
+			// but Throngus will always go through all three
+			// before he picks the first one again. 
+
+			uint8 i = 0;
+
+			uint8 base[3] = {1,2,3};
+
+			while(phases[i] == 0)
+			{
+				i++;
+
+				if(i==3)
+				{
+					i = 0;
+
+					for(uint8 z = 0; z <= 2; z++)
+					{
+						while(phases[i] = 0)
+						{
+							uint8 r = urand(0,2);
+							phases[i] = base[r];
+							base[r] = 0;
+						}
+					}
+				}
+			}
+
+			return phases[i];
 		}
 
 		void DespawnCreatures(uint32 entry)
