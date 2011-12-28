@@ -38,7 +38,6 @@ enum Spells
 	SPELL_BOUCLIER = 90830, // Bouclier incendiaire
 
 	SPELL_PHALANGE = 74908, // Phalange individuelle
-	SPELL_ARDENTE = 90764, // Flammes ardentes // Sengende Flammen
 	SPELL_ROSSER = 47480, // Rosser
 	SPELL_LAME = 74981, // Double-lames // Doppelklingen
 	SPELL_RUGIS = 74976, // Rugissement désorientant // Desorientierendes Gebrüll
@@ -59,7 +58,14 @@ enum Spells
 	// Swords Phase
 	SPELL_DUAL_BLADES_BUFF = 74981,
 	SPELL_TRASH_BUFF = 47480,
+	SPELL_DISORIENTING_ROAR = 74976,
+	SPELL_BURNING_FLAMES = 90764,
 
+	// Mace Phase
+	SPELL_ENCUMBERED = 75007,
+	SPELL_IMPALING_SLAM = 75056,
+	SPELL_LAVA_PATCH = 90754,
+	SPELL_LAVA_PATCH_VISUAL = 90752,
 };
 
 enum Events
@@ -70,6 +76,12 @@ enum Events
 
 	// Shield Phase
 	EVENT_PERSONAL_PHALANX = 3,
+
+	// Swords Phase
+
+	// Mace Phase
+
+	EVENT_IMPALING_SLAM = 4,
 
 };
 
@@ -85,7 +97,7 @@ enum Weapon
 enum EquipmentIds
 {
 	EQUIPMENT_ID_SHIELD	= 40400,  // Not Blizzlike
-	EQUIPMENT_ID_SWORDS	= 65094,  // Not Blizzlike
+	EQUIPMENT_ID_SWORD	= 65094,  // Not Blizzlike
 	EQUIPMENT_ID_MACE	= 65090,  // Not Blizzlike
 };
 
@@ -120,11 +132,13 @@ public:
 		void JustDied(Unit* /*killer*/)
 		{
 			me->MonsterYell(SAY_DIED, LANG_UNIVERSAL, NULL);
+			DespawnCreatures(NPC_FIRE_PATCH);
 		}
 
 		void Reset()
 		{
 			currentWaepon = WEAPON_NON;
+			DespawnCreatures(NPC_FIRE_PATCH);
 		}
 
 		void UpdateAI(const uint32 diff)
@@ -147,6 +161,8 @@ public:
 				// Chooses a new Weapon
 				IntializeWeapon();
 
+				events.ScheduleEvent(EVENT_PICK_WEAPON, 30000);
+
 				return;
 			}
 
@@ -159,8 +175,6 @@ public:
 				case EVENT_PICK_WEAPON:
 					// It is only need to set the Weapon to WEAPON_NON to switch the Weapon
 					currentWaepon = WEAPON_NON;
-
-					events.ScheduleEvent(EVENT_PICK_WEAPON, 50000);
 					break;
 
 				case EVENT_PERSONAL_PHALANX:
@@ -169,14 +183,34 @@ public:
 
 					events.ScheduleEvent(EVENT_PERSONAL_PHALANX, 10000);
 					break;
+
+				case EVENT_IMPALING_SLAM:
+					if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500.0f, true))
+						DoCast(tempTarget, SPELL_IMPALING_SLAM);
+
+					events.ScheduleEvent(EVENT_IMPALING_SLAM, 15000);
+					break;
+
+				default:
+					break;
 				}
 			}
-			DoMeleeAttackIfReady();
 
+			DoMeleeAttackIfReady();
+		}
+
+		void JustSummoned(Creature* summon)
+		{
+			//summon->setActive(true);
+
+			summon->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+
+			if(summon->GetEntry() == NPC_FIRE_PATCH)
+				summon->CastSpell(summon, SPELL_LAVA_PATCH_VISUAL, true);
 		}
 
 	private:
-		inline void IntializeWeapon()
+		void IntializeWeapon()
 		{ // Intialize next Phase
 
 			// Choose Weapon
@@ -199,21 +233,30 @@ public:
 				break;
 
 			case WEAPON_SWORDS:
+				DoCast(me, SPELL_DUAL_BLADES_BUFF, true);
+				DoCast(me, SPELL_TRASH_BUFF, true);
 
-				SetEquipmentSlots(false, EQUIPMENT_ID_SWORDS, EQUIPMENT_ID_SWORDS,0);
+				SetEquipmentSlots(false, EQUIPMENT_ID_SWORD, EQUIPMENT_ID_SWORD,0);
 
 				break;
 
 			case WEAPON_MACE:
 
+				if(me->GetMap()->IsHeroic())
+					DoCast(me, SPELL_LAVA_PATCH, true);
+				
+				DoCast(me, SPELL_ENCUMBERED, true);
+
 				SetEquipmentSlots(false, EQUIPMENT_ID_MACE, 0,0);
+
+				events.ScheduleEvent(EVENT_IMPALING_SLAM, 7000);
 
 				break;
 			}
 
 		}
 
-		inline void ResetWeapon()
+		void ResetWeapon()
 		{ // Resets last Phase
 
 			events.Reset();
@@ -224,8 +267,25 @@ public:
 			me->RemoveAura(SPELL_PERSONAL_PHALANX);
 
 			// Swords Phase
+			me->RemoveAura(SPELL_DUAL_BLADES_BUFF);
+			me->RemoveAura(SPELL_TRASH_BUFF);
 
 			// Mace Phase
+			me->RemoveAura(SPELL_LAVA_PATCH);
+			me->RemoveAura(SPELL_ENCUMBERED);
+
+		}
+
+		void DespawnCreatures(uint32 entry)
+		{
+			std::list<Creature*> creatures;
+			GetCreatureListWithEntryInGrid(creatures, me, entry, 1000.0f);
+
+			if (creatures.empty())
+				return;
+
+			for (std::list<Creature*>::iterator iter = creatures.begin(); iter != creatures.end(); ++iter)
+				(*iter)->DespawnOrUnsummon();
 		}
 	};
 };

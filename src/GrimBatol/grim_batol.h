@@ -79,6 +79,9 @@ enum CreatureIds
     NPC_BALEFLAME = 50387,
     NPC_FARSEER_TOORANU = 50385,
 	
+	// Forgemaster Throngus
+	NPC_FIRE_PATCH = 48711,
+
 	// Drahga Shadowburner
 	NPC_INVOCATION_OF_THE_FLAME_STALKER = 40355,
 	NPC_INVOKED_FLAMING_SPIRIT = 40357,
