@@ -26,8 +26,10 @@
 
 /* ToDo:
 - Damage of Shadow Gale needs to be fixed
+- Shadow Gale is not displayed right
 - Shadow Gale debuff has to be displayed
 - Correct the Spell of the Twilight Hatchlings in SAI Script (Their damage is too high)
+- Implement a better GetRandomEgg() method
 */
 
 #include "ScriptPCH.h"
@@ -86,14 +88,6 @@ enum Points
 	POINT_ERUDAX_IS_AT_STALKER	= 2,
 };
 
-enum ShadowGalePorgressState
-{
-	STATE_NOT_IN_PROGRESS	= 0,
-	STATE_EXECUTING_INTRO	= 1,
-	STATE_IN_PROGRESS		= 2,
-	STATE_SUMMON_ADS		= 3,
-};
-
 class boss_erudax: public CreatureScript
 {
 public: 
@@ -138,9 +132,9 @@ public:
 			me->GetMotionMaster()->Clear();
 			me->GetMotionMaster()->MoveChase(me->getVictim());
 
-			events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, 8000);
+			events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, 4000);
 
-			events.ScheduleEvent(EVENT_BINDING_SHADOWS, 5000);
+			events.ScheduleEvent(EVENT_BINDING_SHADOWS, 9000);
 
 			events.ScheduleEvent(EVENT_SHADOW_GALE, 20000);
 
@@ -163,6 +157,7 @@ public:
 				DespawnCreatures(NPC_SHADOW_GALE_STALKER);
 				RemoveShadowGaleDebuffFromPlayers();
 
+				me->SetReactState(REACT_AGGRESSIVE);
 				me->GetMotionMaster()->Clear();
 				me->GetMotionMaster()->MoveChase(me->getVictim());
 
@@ -179,7 +174,7 @@ public:
 				ShouldSummonAdds = false;
 
 				// DBM says that the Spell has 40s CD
-				events.ScheduleEvent(EVENT_SHADOW_GALE, 40000);
+				events.ScheduleEvent(EVENT_SHADOW_GALE, urand(40000,44000));
 			}
 
 			events.Update(diff);
@@ -191,7 +186,7 @@ public:
 
 				case EVENT_ENFEEBLING_BLOW:
 					DoCastVictim(SPELL_ENFEEBLING_BLOW);
-					events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, 20000);
+					events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, urand(19000,24000));
 					break;
 
 				case EVENT_SHADOW_GALE:
@@ -210,7 +205,7 @@ public:
 					if (Unit* tempTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 500.0f, true))
 						DoCast(tempTarget,SPELL_BINDING_SHADOWS);
 
-					events.ScheduleEvent(EVENT_BINDING_SHADOWS, 15000);
+					events.ScheduleEvent(EVENT_BINDING_SHADOWS, urand(12000,17000));
 					break;
 
 				default:
@@ -224,6 +219,11 @@ public:
 		void KilledUnit(Unit* victim)
 		{
 			me->MonsterYell(SAY_KILL, LANG_UNIVERSAL, NULL);
+		}
+
+		virtual void JustReachedHome()
+		{
+			ResetMinions();
 		}
 
 
@@ -250,9 +250,8 @@ public:
 				case POINT_ERUDAX_IS_AT_STALKER:
 
 					// if Erudax is not at the Stalkers poision while he is casting
-					// the Casting Effect would not displayed right
-					me->SetReactState(REACT_AGGRESSIVE);
-					DoCast(me,SPELL_SHADOW_GALE_VISUAL);
+					// the Casting Effect would not displayed right				
+					DoCast(SPELL_SHADOW_GALE_VISUAL);
 					ShouldSummonAdds = true;
 
 					break;
