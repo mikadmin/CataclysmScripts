@@ -207,6 +207,9 @@ public:
 
 		void DamageDealt(Unit* victim, uint32& damage, DamageEffectType /*damageType*/)
 		{
+			if(currentWaepon != WEAPON_SWORDS || !me->GetMap()->IsHeroic())
+				return;
+
 			if(me->GetMap()->IsHeroic() && damage > 0)
 				me->CastSpell(me->getVictim(), SPELL_BURNING_FLAMES, true);
 		}
@@ -215,14 +218,11 @@ public:
 		inline void IntializeWeapon()
 		{ // Intialize next Phase
 
-
-
-
 			// Choose Weapon
 			currentWaepon = GetNextPhase();
 
-			// If you want to test Phases you can overwrite the rand value here
-			currentWaepon = WEAPON_SWORDS;
+			// If you want to test a single Phase you can overwrite the rand value here
+			// currentWaepon = WEAPON_MACE;
 
 			switch(currentWaepon)
 			{
@@ -284,37 +284,47 @@ public:
 		}
 
 		inline uint8 GetNextPhase()
-		{
+		{	// [100%] Working
+
 			// zit. Wowhead
 			// The three weapon phases will switch randomly,
 			// but Throngus will always go through all three
 			// before he picks the first one again. 
 
-			uint8 i = 0;
+			uint8 base[3] = {WEAPON_SHIELD, WEAPON_SWORDS, WEAPON_MACE};
 
-			uint8 base[3] = {1,2,3};
-
-			while(phases[i] == 0)
-			{
-				i++;
-
-				if(i==3)
+			if (phases[0]==0 && phases[1]==0 && phases[2]==0)
+			{ // If Throngus was in every phase or the fight just begun calculate new phase string
+				for(uint8 i = 0; i <= 2; i++)
 				{
-					i = 0;
-
-					for(uint8 z = 0; z <= 2; z++)
+					while(phases[i] == 0)
 					{
-						while(phases[i] = 0)
-						{
-							uint8 r = urand(0,2);
-							phases[i] = base[r];
-							base[r] = 0;
-						}
+						uint8 r = urand(0,2);
+						phases[i] = base[r];
+						base[r] = 0;
+					}
+				}
+	
+				uint8 v = phases[0];
+				phases[0] = 0;
+				return v;
+
+			}else
+			{ // If Throngus was still in a Phase, just get next Phase
+				for(uint8 i = 0; i <= 2; i++)
+				{
+					if(phases[i] != 0)
+					{
+						uint8 v = phases[i];
+						phases[i] = 0;
+
+						return v;
 					}
 				}
 			}
 
-			return phases[i];
+			// Should not happend but sure is sure
+			return urand(WEAPON_SHIELD,WEAPON_MACE);
 		}
 
 		void DespawnCreatures(uint32 entry)
