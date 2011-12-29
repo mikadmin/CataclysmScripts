@@ -81,7 +81,8 @@ enum CreatureIds
 	
 	// Forgemaster Throngus
 	NPC_FIRE_PATCH = 48711,
-
+	NPC_TWILIGHT_ARCHER = 40197,
+	
 	// Drahga Shadowburner
 	NPC_INVOCATION_OF_THE_FLAME_STALKER = 40355,
 	NPC_INVOKED_FLAMING_SPIRIT = 40357,

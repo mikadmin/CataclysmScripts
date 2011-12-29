@@ -40,9 +40,11 @@ enum Spells
 	SPELL_PICK_WEAPON = 75000, // He switches his weapon (DBM Announce)
 
 	// Shield Phase
-	SPELL_FLAMING_ARROW = 45101,
 	SPELL_PERSONAL_PHALANX = 74908,
 	SPELL_FLAMING_SHIELD = 90819, // Wowhead is wrong
+
+	SPELL_FLAMING_ARROW = 45101, // Casted by the Archers
+	SPELL_FLAMING_ARROW_VISUAL = 74944, 
 
 	// Swords Phase
 	SPELL_DUAL_BLADES_BUFF = 74981,
@@ -72,6 +74,9 @@ enum Events
 	// Mace Phase
 	EVENT_IMPALING_SLAM = 5,
 
+	// Twilight Archer
+	EVENT_ARCHER_SHOOT = 6,
+
 };
 
 enum Weapon
@@ -83,12 +88,29 @@ enum Weapon
 	WEAPON_MACE		= 4,
 };
 
-enum EquipmentIds
+enum Equipment
 {
 	EQUIPMENT_ID_SHIELD	= 40400,  // Not Blizzlike
 	EQUIPMENT_ID_SWORD	= 65094,  // Not Blizzlike
 	EQUIPMENT_ID_MACE	= 65090,  // Not Blizzlike
 };
+
+// Summon Position of the Twilight Archers that are attacking
+// the Playery in the shield Phase (not Blizzlike)
+Position const TwilightArcherSummonPos[13] =
+{{-542.994f, -605.236f, 300.201f, 1.68049f},
+{-543.59f, -605.413f, 283.784f, 1.50377f},
+{-521.237f, -605.435f, 300.76f, 1.63886f},
+{-483.862f, -588.658f, 297.574f, 2.38106f},
+{-482.655f, -588.461f, 280.966f, 2.34571f},
+{-471.266f, -575.324f, 295.906f, 2.30254f},
+{-525.377f, -455.312f, 285.288f, 4.66187f},
+{-544.49f, -454.961f, 295.831f, 4.79539f},
+{-522.164f, -455.31f, 299.791f, 4.77575f},
+{-468.703f, -489.004f, 300.462f, 3.78616f},
+{-470.907f, -484.791f, 282.203f, 3.87255f},
+{-485.052f, -474.621f, 296.525f, 3.92361f},
+{-481.352f, -477.21f, 280.714f, 3.72334f}};
 
 class boss_forgemaster_throngus: public CreatureScript
 {
@@ -122,12 +144,14 @@ public:
 		{
 			me->MonsterYell(SAY_DIED, LANG_UNIVERSAL, NULL);
 			DespawnCreatures(NPC_FIRE_PATCH);
+			DespawnCreatures(NPC_TWILIGHT_ARCHER);
 		}
 
 		void Reset()
 		{
 			currentWaepon = WEAPON_NON;
 			DespawnCreatures(NPC_FIRE_PATCH);
+			DespawnCreatures(NPC_TWILIGHT_ARCHER);
 
 			SetEquipmentSlots(false, 0, 0,0);
 		}
@@ -233,6 +257,9 @@ public:
 				if(me->GetMap()->IsHeroic())
 					DoCast(me, SPELL_FLAMING_SHIELD, true);
 
+				for(uint32 i = 0; i<=12; i++)
+					me->SummonCreature(NPC_TWILIGHT_ARCHER,TwilightArcherSummonPos[i],TEMPSUMMON_MANUAL_DESPAWN);
+
 				events.ScheduleEvent(EVENT_PERSONAL_PHALANX, 10000);
 
 				break;
@@ -267,6 +294,7 @@ public:
 		{ // Resets last Phase
 
 			events.Reset();
+			DespawnCreatures(NPC_TWILIGHT_ARCHER);
 
 			// Remove Auras spezified to the Phases
 			// Shield Phase
@@ -294,7 +322,7 @@ public:
 			uint8 base[3] = {WEAPON_SHIELD, WEAPON_SWORDS, WEAPON_MACE};
 
 			if (phases[0]==0 && phases[1]==0 && phases[2]==0)
-			{ // If Throngus was in every phase or the fight just begun calculate new phase string
+			{ // If Throngus was in every phase or the fight has just begun calculate new phase string
 				for(uint8 i = 0; i <= 2; i++)
 				{
 					while(phases[i] == 0)
@@ -304,7 +332,7 @@ public:
 						base[r] = 0;
 					}
 				}
-	
+
 				uint8 v = phases[0];
 				phases[0] = 0;
 				return v;
@@ -341,7 +369,58 @@ public:
 	};
 };
 
+class mob_twilight_archer : public CreatureScript
+{
+public:
+	mob_twilight_archer() : CreatureScript("mob_twilight_archer") { }
+
+	CreatureAI* GetAI(Creature* creature) const
+	{
+		return new mob_twilight_archerAI (creature);
+	}
+
+	struct mob_twilight_archerAI : public ScriptedAI
+	{
+		mob_twilight_archerAI(Creature* creature) : ScriptedAI(creature)
+		{
+			creature->SetReactState(REACT_PASSIVE);
+		}
+
+		EventMap events;
+
+		void IsSummonedBy(Unit* summoner)
+		{
+			DoZoneInCombat();
+
+			events.ScheduleEvent(EVENT_ARCHER_SHOOT, urand(1700,2500));
+		}
+
+		void UpdateAI(const uint32 diff)
+		{
+			events.Update(diff);
+
+			while (uint32 eventId = events.ExecuteEvent())
+			{
+				switch(eventId)
+				{
+				case EVENT_ARCHER_SHOOT:
+
+					if(Player* nearPlayer = GetPlayerAtMinimumRange(1.0f))
+					{
+						me->CastSpell(nearPlayer,SPELL_FLAMING_ARROW_VISUAL,true);
+						me->CastSpell(nearPlayer,SPELL_FLAMING_ARROW,true);
+					}
+
+					events.ScheduleEvent(EVENT_ARCHER_SHOOT, urand(1700,2500));
+					break;
+				}
+			}
+		}
+	};
+};
+
 void AddSC_boss_forgemaster_throngus() 
 {
 	new boss_forgemaster_throngus();
+	new mob_twilight_archer();
 }
