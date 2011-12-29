@@ -8,9 +8,9 @@
 
 enum Spells
 {
-	SPELL_N_BOLT                     = 86331, //Lightning Bolt
-	SPELL_H_BOLT                     = 93990, //Lightning Bolt HEROIC
-	SPELL_H_TEMP                     = 86340, //TEMP HEROIC
+	SPELL_N_BOLT                     = 86331, // Lightning Bolt
+	SPELL_H_BOLT                     = 93990, // Lightning Bolt HEROIC
+	SPELL_H_TEMP                     = 86340, // TEMP HEROIC
 	SPELL_BUFF                       = 86292,
 	SPELL_SUMMON_TEMPEST			 = 86340, // Summons Lurking Tempest
 };
@@ -21,6 +21,13 @@ enum Events
 	EVENT_BUFF = 2,
 	EVENT_SAY  = 3,
 	EVENTS_CHECK_VICTIM_IS_OUT_OF_RANGE = 4,
+};
+
+enum Actions
+{
+	ACTION_TEMPEST_MOVE		= 1,
+	ACTION_TEMPEST_MOVE_IN	= 2,
+	ACTION_TEMPEST_MOVE_OUT	= 3,
 };
 
 Position const LurkingTempestSummonPos[8] =
@@ -55,18 +62,17 @@ public:
 		InstanceScript* pInstance;
 		EventMap events;
 		SummonList summons;
-		Creature* LurkingTempestList[8];
-
+		
 		void Reset()
 		{
 			events.Reset();
-			//summons.DespawnAll();
-			DespawnCreatures(NPC_LURKING_TEMPEST);
+			summons.DespawnAll();
 		}
 
 		void EnterCombat(Unit * /*who*/)
 		{
 			me->MonsterYell(SAY_AGGRO, 0, 0);
+
 			if (true /*me->GetMap()->IsHeroic()*/) 
 			{
 				DoCast(me,SPELL_H_TEMP);
@@ -74,7 +80,7 @@ public:
 
 			if(me->GetMap()->IsHeroic())
 			{
-				for(uint8 i=1; i <= 8; i++)
+				for(uint8 i=0; i <= 7; i++)
 				{
 					Creature * LurkingTempest = me->SummonCreature(NPC_LURKING_TEMPEST, LurkingTempestSummonPos[i], TEMPSUMMON_DEAD_DESPAWN);
 					LurkingTempest->GetAI()->SetData(DATA_LURKING_TEMPEST_NO, i);
@@ -82,6 +88,8 @@ public:
 					//LurkingTempestList[i] = LurkingTempest;
 					//me->MonsterYell("Summoned", 0, 0);
 				}
+
+				summons.DoAction(0);
 			}
 
 			EnterPhaseGround();
