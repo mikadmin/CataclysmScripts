@@ -21,7 +21,7 @@
 
 /**********
 * Script Coded by Naios
-* Script Complete 10% (or less)
+* Script Complete 60% (or less)
 **********/
 
 #include "ScriptPCH.h"
@@ -160,6 +160,9 @@ public:
 		{
 			if (!UpdateVictim() || me->HasUnitState(UNIT_STAT_CASTING))
 				return;
+
+			if(currentWaepon == WEAPON_SHIELD && me->GetMap()->IsHeroic() && (!me->HasAura(SPELL_FLAMING_SHIELD)))
+					DoCast(me, SPELL_FLAMING_SHIELD, true);
 
 			if(currentWaepon == WEAPON_NON)
 			{
@@ -405,7 +408,7 @@ public:
 				{
 				case EVENT_ARCHER_SHOOT:
 
-					if(Player* nearPlayer = GetPlayerAtMinimumRange(1.0f))
+					if(Unit* nearPlayer = SelectTarget(SELECT_TARGET_NEAREST, 0, 2, true))
 					{
 						me->CastSpell(nearPlayer,SPELL_FLAMING_ARROW_VISUAL,true);
 						me->CastSpell(nearPlayer,SPELL_FLAMING_ARROW,true);
