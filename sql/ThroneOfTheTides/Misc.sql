@@ -19,10 +19,3 @@ UPDATE `creature_template` SET `faction_A`=35, `faction_H`=35 WHERE `entry`=4079
 -- Commander Ulthrok
 UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_commander_ulthok' WHERE `entry`=40765 LIMIT 1;
 DELETE FROM `smart_scripts` WHERE `entryorguid` = 40765;
-
--- Lady Nazjar
--- She is spawned twice...
-DELETE FROM `creature` WHERE `guid` = 1086658;
-
-UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_lady_nazjar' WHERE `entry`=40586 LIMIT 1;
-DELETE FROM `smart_scripts` WHERE `entryorguid` = 40586;
