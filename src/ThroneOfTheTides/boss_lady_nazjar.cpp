@@ -24,17 +24,16 @@
 #include "ScriptPCH.h"
 #include "throne_of_the_tides.h"
 
-// Boss
-#define SPELL_FUNGAL_SPORES 76001
-#define SPELL_SHOCK_BLAST 76008
-#define SPELL_SUMMON_GEYSER 75722
-#define SPELL_WATERSPOUT 75683
-#define SPELL_WATERSPOUT_SUMMON DUNGEON_MODE(90495,90497) // summons tornado every 7/3 secs.
-// Adds
-#define SPELL_CHAIN_LIGHTNING 75813
-#define SPELL_LIGHTNING_SURGE 75992
-#define SPELL_ARC_SLASH 75907
-#define SPELL_ENRAGE 75998
+enum Spells
+{
+	SPELL_FUNGAL_SPORES = 76001,
+	SPELL_SHOCK_BLAST = 76008,
+	SPELL_SUMMON_GEYSER = 75722,
+	SPELL_WATERSPOUT = 75683,
+	SPELL_WATERSPOUT_SUMMON = 90495,
+	SPELL_WATERSPOUT_VISUAL = 90440,
+	SPELL_WATERSPOUT_DOT = 90479,
+};
 
 enum Yells
 {
@@ -60,6 +59,11 @@ enum Events
 	EVENT_GEYSER = 1,
 	EVENT_FUNGAL_SPORES = 2,
 	EVENT_SHOCK_BLAST = 3,
+};
+
+enum Points
+{
+	POINT_WATERSPOUT_FINISHED,
 };
 
 Position const SummonPos[3] =
@@ -88,6 +92,7 @@ public:
 		uint8 Phase;
 		bool Phased;
 		uint8 SpawnCount;
+		uint32 eventStop;
 
 		EventMap events;
 
@@ -97,11 +102,8 @@ public:
 
 			Phase = PHASE_NORMAL_ONE;
 			Phased = false;
-			SpawnCount = 3;
 
-			// ?
-			me->RemoveAurasDueToSpell(SPELL_WATERSPOUT);
-			me->RemoveAurasDueToSpell(SPELL_WATERSPOUT_SUMMON);
+			me->RemoveAllAuras();
 
 			me->GetMotionMaster()->MoveTargetedHome();
 
@@ -111,12 +113,15 @@ public:
 
 		void SummonedCreatureDespawn(Creature* summon)
 		{
+			summon->setFaction(me->getFaction());
+
 			switch(summon->GetEntry())
 			{
 			case NPC_SUMMONED_WITCH:
 			case NPC_SUMMONED_GUARD:
 				SpawnCount--;
 				break;
+
 			}
 		}
 
@@ -127,20 +132,41 @@ public:
 
 		void JustSummoned(Creature* summon)
 		{
-			if(summon->GetEntry() == NPC_SUMMONED_WITCH || summon->GetEntry() == NPC_SUMMONED_GUARD )
-				summon->GetMotionMaster()->MoveChase(SelectTarget(SELECT_TARGET_RANDOM, 0, 2, true));
+			summon->setFaction(me->getFaction());
+
+			switch(summon->GetEntry())
+			{
+			case NPC_SUMMONED_WITCH:
+			case NPC_SUMMONED_GUARD:
+				summon->AI()->DoZoneInCombat();
+				summon->GetMotionMaster()->MoveChase(SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true));
+				break;
+			case NPC_SUMMONED_WATERSPOUT:
+			case NPC_SUMMONED_WATERSPOUT_HC:
+
+				if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true))
+				{
+					Position pos;
+					target->GetPosition(&pos);
+					pos.
+					summon->GetMotionMaster()->MovePoint(POINT_WATERSPOUT_FINISHED,pos);
+				}
+				break;
+			}
 		}
 
 		void EnterCombat(Unit* /*who*/)
 		{
+			SpawnCount = 3;
+
 			DoScriptText(SAY_AGGRO, me);
 
 			if (pInstance)
 				pInstance->SetData(DATA_LADY_NAZJAR_EVENT, IN_PROGRESS);
 
-			events.ScheduleEvent(EVENT_GEYSER, 20000);
-			events.ScheduleEvent(EVENT_FUNGAL_SPORES, urand(12000,14000));
-			events.ScheduleEvent(EVENT_SHOCK_BLAST, urand(15000,18000));
+			events.ScheduleEvent(EVENT_GEYSER, 11000);
+			events.ScheduleEvent(EVENT_FUNGAL_SPORES, urand(3000,10000));
+			events.ScheduleEvent(EVENT_SHOCK_BLAST, urand(6000,12000));
 		}
 
 		void JustDied(Unit* /*pKiller*/)
@@ -160,10 +186,16 @@ public:
 				return;
 
 			if (SpawnCount == 0)
+			{
+				events.DelayEvents(eventStop-diff);
 				LeavePhaseClearDreames();
+			}
 
 			if ((me->HealthBelowPct(67) && Phase == PHASE_NORMAL_ONE) || (me->HealthBelowPct(34) && Phase == PHASE_NORMAL_TWO))
+			{
+				eventStop = diff;
 				EnterPhaseClearDreames();
+			}
 
 			if (me->HasUnitState(UNIT_STAT_CASTING))
 				return;
@@ -180,7 +212,7 @@ public:
 					case EVENT_GEYSER:
 						if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true))
 							DoCast(target, SPELL_SUMMON_GEYSER);
-						events.ScheduleEvent(EVENT_GEYSER, 20000);
+						events.ScheduleEvent(EVENT_GEYSER, urand(14000,17000));
 						break;
 					case EVENT_FUNGAL_SPORES:
 						if (Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true))
@@ -209,13 +241,13 @@ public:
 
 			SetCombatMovement(false);
 
-			DoTeleportTo(192.056f, 802.527f, 807.638f, 3);
+			DoTeleportTo(192.056f, 802.527f, 807.638f, me->GetOrientation());
 
 			DoCast(me, SPELL_WATERSPOUT, true);
 			me->AddAura(SPELL_WATERSPOUT_SUMMON, me);
 
 			for(uint8 i = 0; i<=2;i++)
-				me->SummonCreature((i==0) ? NPC_SUMMONED_WITCH : NPC_SUMMONED_GUARD, SummonPos[i], TEMPSUMMON_CORPSE_DESPAWN, 1000);
+				me->SummonCreature((i!=0) ? NPC_SUMMONED_WITCH : NPC_SUMMONED_GUARD, SummonPos[i], TEMPSUMMON_CORPSE_DESPAWN, 1000);
 
 		}
 
@@ -228,6 +260,8 @@ public:
 			SetCombatMovement(true);
 			SpawnCount = 3;
 
+			me->CastStop(0);
+
 			me->RemoveAurasDueToSpell(SPELL_WATERSPOUT);
 			me->RemoveAurasDueToSpell(SPELL_WATERSPOUT_SUMMON);
 		}
@@ -239,6 +273,14 @@ public:
 			DespawnCreatures(NPC_SUMMONED_WATERSPOUT);
 			DespawnCreatures(NPC_SUMMONED_GEYSER);
 		}
+
+		/*inline Position GetWatersproudPosition(Position* pos)
+		{
+			int x = pos->GetPo
+			int y
+			int z = pos->;
+
+		}*/
 
 		void DespawnCreatures(uint32 entry)
 		{
@@ -259,7 +301,43 @@ public:
 	}
 };
 
+class mob_waterspout : public CreatureScript
+{
+public:
+	mob_waterspout() : CreatureScript("mob_waterspout") { }
+
+	struct mob_waterspoutAI : public ScriptedAI
+	{
+		mob_waterspoutAI(Creature* pCreature) : ScriptedAI(pCreature)
+		{
+			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
+			me->SetReactState(REACT_PASSIVE);
+
+			DoCast(me, SPELL_WATERSPOUT_VISUAL, true);
+		}
+
+		void MovementInform(uint32 type, uint32 id)
+		{
+			if (type == POINT_MOTION_TYPE && id == POINT_WATERSPOUT_FINISHED)
+				me->DespawnOrUnsummon();
+		}
+
+		void UpdateAI(const uint32 diff)
+		{
+			if(Unit* target = GetPlayerAtMinimumRange(0))
+				if (me->GetDistance(target) < 1.5f)
+					DoCast(target,SPELL_WATERSPOUT_DOT, true);
+		}
+	};
+
+	CreatureAI* GetAI(Creature *pCreature) const
+	{
+		return new mob_waterspoutAI (pCreature);
+	}
+};
+
 void AddSC_boss_lady_nazjar()
 {
 	new boss_lady_nazjar();
+	new mob_waterspout();
 }

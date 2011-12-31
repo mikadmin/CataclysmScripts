@@ -8,6 +8,9 @@ DELETE FROM `creature` WHERE `guid` = 1086658 AND `id` = 40586;
 UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_lady_nazjar' WHERE `entry`=40586 LIMIT 1;
 DELETE FROM `smart_scripts` WHERE `entryorguid` = 40586;
 
+UPDATE `creature_template` SET `ScriptName`='mob_waterspout' WHERE `entry`=48571 LIMIT 1;
+UPDATE `creature_template` SET `ScriptName`='mob_waterspout' WHERE `entry`=49108 LIMIT 1;
+
 -- Who spawned all those non blizzlike mobs? (no creature addon)
 -- Guards
 DELETE FROM `creature` WHERE `guid` = 1086656 AND `id` = 40633;
