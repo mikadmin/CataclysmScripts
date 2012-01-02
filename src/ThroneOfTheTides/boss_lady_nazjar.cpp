@@ -148,7 +148,6 @@ public:
 				{
 					Position pos;
 					target->GetPosition(&pos);
-					pos.
 					summon->GetMotionMaster()->MovePoint(POINT_WATERSPOUT_FINISHED,pos);
 				}
 				break;
