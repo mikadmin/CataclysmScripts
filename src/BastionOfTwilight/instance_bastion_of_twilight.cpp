@@ -142,8 +142,6 @@ public:
                         creature->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
 					}
 					uiSlateDrake = creature->GetGUID();
-					creature->SetReactState(REACT_PASSIVE);
-					creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 					break;
 				case NPC_STORM_RIDER:
 					if (uiRandomDragons[0] == RANDOM_DRAGON_STORM_RIDER || uiRandomDragons[1] == RANDOM_DRAGON_STORM_RIDER)
@@ -152,8 +150,6 @@ public:
                         creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 					}
 					uiStormRider = creature->GetGUID();
-					creature->SetReactState(REACT_PASSIVE);
-					creature->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
 					break;
 				case NPC_NETHER_SCION:
 					if (uiRandomDragons[0] == RANDOM_DRAGON_NETHER_SCION || uiRandomDragons[1] == RANDOM_DRAGON_NETHER_SCION)
@@ -162,14 +158,10 @@ public:
                         creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 					}
 					uiNetherScion = creature->GetGUID();
-					creature->SetReactState(REACT_PASSIVE);
-					creature->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
 					break;
 				case NPC_TIME_WARDEN:
 					uiTimeWarden = creature->GetGUID();
 					creature->SetReactState(REACT_PASSIVE);
-					creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-					creature->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
 				case NPC_PROTO_BEHEMOTH:
 					uiProtoBehemoth = creature->GetGUID();
 					if (Unit * TimeWarden = instance->GetCreature(GetData64(NPC_TIME_WARDEN)))

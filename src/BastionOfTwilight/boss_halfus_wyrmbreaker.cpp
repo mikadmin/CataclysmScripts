@@ -187,10 +187,6 @@ public :
 	}
 };
 
-enum DragonsSpells
-{
-
-};
 
 class npc_halfus_dragon : public CreatureScript{
 public:
@@ -199,8 +195,6 @@ public:
 	struct npc_halfus_dragonAI : public ScriptedAI {
 		npc_halfus_dragonAI(Creature * creature) : ScriptedAI(creature) {}
 
-		EventMap events;
-
 		void Reset()
 		{
 			me->GetMotionMaster()->MoveTargetedHome();
@@ -208,27 +202,12 @@ public:
 			me->SetReactState(REACT_PASSIVE);
 			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 			me->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+			me->RemoveAllAuras();
 		}
-
-		void UpdateAI(const uint32 diff)
+		void JustDied()
 		{
-			if (!UpdateVictim())
-				return;
-
-			events.Update(diff);
-
-			while (uint32 eventId = events.ExecuteEvent())
-			{
-				switch (eventId)
-				{
-
-
-
-
-				}
-			}
-
-			DoMeleeAttackIfReady();
+			if (Creature * Halfus = me->FindNearestCreature(BOSS_WYRMBREAKER,1000.0f, true))
+				me->SetAuraStack(SPELL_DRAGON_VENGEANCE,Halfus,Halfus->GetAuraCount(SPELL_DRAGON_VENGEANCE)+1);
 		}
 	};
 
@@ -239,7 +218,7 @@ public:
 
 	bool OnGossipHello(Player* pPlayer, Creature* creature){
 
-		if(creature->isInCombat())
+		if(creature->isInCombat() || creature->getFaction()==16)
 			return false;
 
 		char const* _message = "Let the Fight begin!";
@@ -268,12 +247,12 @@ public:
 			case NPC_STORM_RIDER:
 				creature->CastSpell(creature->GetPositionX(),creature->GetPositionY(),creature->GetPositionZ(),SPELL_CYCLONE_WINDS,false);
 				break;
+			case NPC_TWILIGHT_DRAKE:
+				break;
 			}
 
 			Halfus->AddAura(SPELL_BIND_WILL,creature);
-			creature->setFaction(14);
-
-			creature->SetAuraStack(SPELL_DRAGON_VENGEANCE,Halfus,Halfus->GetAuraCount(SPELL_DRAGON_VENGEANCE)+1);
+			creature->setFaction(16);
 			creature->SetReactState(REACT_AGGRESSIVE);
 			creature->RemoveFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE);
 			
@@ -355,6 +334,7 @@ public:
 		return new spell_cyclon_windsSpellScript();
 	}
 };
+
 void AddSC_boss_halfus_wyrmbreaker()
 {
 	new boss_halfus_wyrmbreaker();
