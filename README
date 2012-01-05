@@ -6,7 +6,14 @@ Forgemaster Throngus: 50% Complete (or less) - In Development
 Drahga Shadowburner: 90% Complete (or less) - Released
 Erudax: 90% Complete (or less) - Released
 
+Blackrock Caverns
+Ascendant Lord Obsidius: 97% (or less) - Released
+Beauty: 80% (or less) - Released
+
 Raids:
+Bastion of Twilight
+Halfus Whyrmbreaker: 65% Complete (or less) - In Development
+
 Firelands
 Instance Script: 30% Complete (or less)
 Shannox: ~80% Complete (or less)
@@ -15,7 +22,11 @@ Majordomo Staghelm: ~25% Complete (or less)
 
 
 This Cataclysm Scripts are working with the most Cataclysm EMU´s
-(Currently they are Developed with TrilliumEMU (4.2a Scripts) and ArkCore (4.06a Scripts) )
+(Currently they are Developed with TrilliumEMU (4.2a Scripts) and ArkCore (4.06a Scripts))
+The target DB is ArkDB > 2.2.0.
+
+All Scripts/ Sql files were tested and are working.
+
 
 Some of this Repo Scripts are only fixed by me, not coded!
 If i forgot to mention you in the credit list don`t hesitate to contact me.
