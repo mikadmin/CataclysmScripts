@@ -18,6 +18,11 @@
 #include "ScriptPCH.h"
 #include "blackrock_caverns.h"
 
+enum Spells
+{
+	SPELL_ENRAGE = 82395,
+};
+
 class boss_beauty : public CreatureScript
 {
 public:
@@ -51,7 +56,41 @@ public:
     };
 };
 
+class mob_runty : public CreatureScript
+{
+public:
+    mob_runty() : CreatureScript("mob_runty") { }
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new mob_runtyAI (creature);
+    }
+
+    struct mob_runtyAI : public ScriptedAI
+    {
+        mob_runtyAI(Creature* creature) : ScriptedAI(creature)
+        {
+            instance = creature->GetInstanceScript();
+        }
+
+        InstanceScript* instance;
+
+        void Reset() {}
+
+        void EnterCombat(Unit* /*who*/) {}
+
+        void UpdateAI(const uint32 Diff)
+        {
+            if (!UpdateVictim())
+                return;
+
+            DoMeleeAttackIfReady();
+        }
+    };
+};
+
 void AddSC_boss_beauty()
 {
     new boss_beauty();
+	new mob_runty();
 }
