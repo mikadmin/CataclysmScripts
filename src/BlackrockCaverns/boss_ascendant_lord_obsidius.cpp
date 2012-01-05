@@ -71,9 +71,9 @@ public:
 
 		void Reset()
 		{
-			me->GetMotionMaster()->MoveTargetedHome();
+			events.Reset();
 
-			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
+			me->GetMotionMaster()->MoveTargetedHome();
 	
 			// Spawns his Shadows and Respawns
 			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
@@ -89,34 +89,35 @@ public:
 			}
 		}
 
-		void EnterCombat(Unit* /*who*/)
+		void EnterCombat(Unit* /*who*/) 
 		{
-			//events.ScheduleEvent(EVENT_THUNDERCLAP, 7000);
-			//events.ScheduleEvent(EVENT_TWILIGHT_CORRUPTION, 10000);
+			events.ScheduleEvent(EVENT_TWILIGHT_CORRUPTION, 10000);
+			events.ScheduleEvent(EVENT_STONE_BLOW, 13000);
 
+			if(me->GetMap()->IsHeroic())
+			events.ScheduleEvent(EVENT_THUNDERCLAP, 7000);
+			
 			Phase = 0;
+
+			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
+				ShadowOfObsidiusList[i]->Attack(me->getVictim(),false);
 
 			me->MonsterYell("You come seeking answers? Then have them! Look upon your answer to living!", LANG_UNIVERSAL, NULL);
 		}
 
 		void UpdateAI(const uint32 diff)
 		{
-			if (!UpdateVictim() || me-> HasUnitState(UNIT_STAT_CASTING))
+			if (!UpdateVictim() || me->HasUnitState(UNIT_STAT_CASTING))
 				return;
 
 			if ((me->HealthBelowPct(69) && Phase == 0) || (me->HealthBelowPct(34) && Phase == 1))
 			{
 				Phase++;
-
-				me->MonsterYell("Your kind has no place in the master's world.", LANG_UNIVERSAL, NULL);
-
+				
 				// Switch Position with a random Shadow of Obsidius and empty Threat list
 
 				Creature* target = ShadowOfObsidiusList[urand(0,RAID_MODE(1,2))];
 				Position telePos;
-
-				if(target == NULL)
-					return;
 
 				me->GetPosition(&telePos);
 
@@ -126,22 +127,37 @@ public:
 
 				// Resetts Aggro
 				me->getThreatManager().resetAllAggro();
-				target->getThreatManager().resetAllAggro();
+		
+				me->MonsterYell("Your kind has no place in the master's world.", LANG_UNIVERSAL, NULL);
+
+				return;
 			}
 
 			events.Update(diff);
 
-			while (uint32 eventId = events.GetEvent())
+			while (uint32 eventId = events.ExecuteEvent())
 			{
 				switch (eventId)
 				{
 
 				case EVENT_THUNDERCLAP:
+					DoCastAOE(SPELL_THUNDERCLAP);
 					events.ScheduleEvent(EVENT_THUNDERCLAP, 7000);
 					break;
 
 				case EVENT_TWILIGHT_CORRUPTION:
+					if(Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 200, true))
+					DoCast(pTarget,SPELL_TWILIGHT_CORRUPTION);
+
 					events.ScheduleEvent(EVENT_TWILIGHT_CORRUPTION, 10000);
+					break;
+
+				case EVENT_STONE_BLOW:
+					DoCastVictim(SPELL_STONE_BLOW);
+					events.ScheduleEvent(EVENT_STONE_BLOW, 13000);
+					break;
+
+				default:
 					break;
 				}
 			}
@@ -149,7 +165,7 @@ public:
 			DoMeleeAttackIfReady();
 		}
 
-		void JustDied()
+		void JustDied(Unit* /*killer*/)
 		{
 			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
 			{
