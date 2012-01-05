@@ -27,6 +27,30 @@
 
 #define MAX_DAZZLIN_DESTRUCTION 6
 
+enum Spells
+{   
+    SPELL_UNRESPONSIVE_WHELP = 86022,
+    SPELL_TIME_DILATION = 83601,
+    SPELL_BERSERK_THERALION = 47008,
+    SPELL_DAZZLING_DESTRUCTION_MISSILE = 86408,
+    SPELL_DAZZLING_DESTRUCTION_SUMMON = 86385,
+    SPELL_ENGULFING_MAGIC = 86622,
+    SPELL_FABILOUS_FLAMES = 86505,
+    SPELL_TWILIGHT_BLAST = 86369,
+    SPELL_TWILIGHT_SHIFT = 86360,
+    SPELL_BLACKOUT = 86788,
+    SPELL_DEVOURING_FLAMES = 86840,
+    SPELL_DEEP_BREATH = 86059,
+    SPELL_TWILIGHT_METEORITE = 86013,
+    SPELL_HYDROLANCE = 82752,
+    SPELL_WATERBOMB = 82699,
+    SPELL_HEART_OF_ICE = 82655,
+    SPELL_GLACIATE = 92508,
+    SPELL_BURNING_BLOOD = 82660,
+    SPELL_FLAME_TORRENT = 82777,
+    SPELL_AEGIS_OF_FLAMES = 92512,
+};
+
 class boss_theralion : public CreatureScript
 {
     public:
@@ -193,6 +217,7 @@ class boss_theralion : public CreatureScript
             return new boss_theralionAI(creature);
         }
 };
+
 class boss_valiona : public CreatureScript
 {
     public:
