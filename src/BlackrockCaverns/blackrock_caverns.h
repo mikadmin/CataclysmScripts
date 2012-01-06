@@ -49,7 +49,6 @@ enum CreatureIds {
 	// Trash mobs
 
 	NPC_BUSTER = 40013,
-	NPC_CHAINS_OF_WOE = 40447,
 	NPC_CONFLAGRATION = 39994,
 	NPC_CRAZED_MAGE = 39982,
 	NPC_DEFILED_EARTH_RAGER = 40023,
@@ -78,6 +77,10 @@ enum CreatureIds {
 	// Corla, Herald of Twilight
 	NPC_TWILIGHT_ZEALOT_CORLA = 50284,
 	NPC_NETHER_ESSENCE_TRIGGER = 49526,
+
+	// Romogg Bonecrusher
+	NPC_ANGERED_EARTH = 50376,
+	NPC_CHAINS_OF_WOE = 40447,
 
 };
 
