@@ -64,14 +64,16 @@ enum CreatureIds {
 	NPC_TWILIGHT_ZEALOT = 39990,
 
 	// Various NPCs
-
 	NPC_RAZ_THE_CRAZED = 39670,
 	NPC_FINKLE_EINHORN = 49476,
 	NPC_TWILIGHT_PORTAL = 51340,
 
 	// Ascendant Lord  Obsidius
-
 	NPC_SHADOW_OF_OBSIDIUS = 40817,
+
+	// Karsh Steelbender
+	NPC_BOUND_FLAMES = 50417,
+	NPC_LAVA_SPOUT_TRIGGER = 49529,
 };
 
 enum GameObjectIds {

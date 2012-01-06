@@ -17,7 +17,7 @@
 
 /**********
 * Script Coded by Naios
-* Script Complete 60% (or less)
+* Script Complete 97% (or less)
 **********/
 
 #include "ScriptPCH.h"
