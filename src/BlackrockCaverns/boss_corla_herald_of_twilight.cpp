@@ -15,33 +15,49 @@
 * with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**********
+* Script Coded by Naios
+* Script Complete 80% (or less)
+**********/
+
+/* ToDo:
+- Add Nether Essence Channel animation
+- Add Spellf for a CHarmed Player
+*/
+
 #include "ScriptPCH.h"
 #include "blackrock_caverns.h"
-
-/*
-Corla, Herald of Twilight yells: Bask in his power! Rise as an agent of the master's rage!
-Corla, Herald of Twilight yells: For the master I'd die a thousand times... A thousan...
-Corla, Herald of Twilight yells: HERETICS! You will suffer for this interruption!
-*/
 
 enum Spells
 {
 	// Corlas Spells
 	SPELL_EVOLUTION = 75697,
+	SPELL_TWILIGHT_EVOLUTION = 75732,
+
 	SPELL_AURA_OF_ACCELERATION = 75817,
 	SPELL_DARK_COMMAND = 75823,
 
 	SPELL_KNEELING_IN_SUPPLICATION = 75608,
 	SPELL_DRAIN_ESSENCE_CHANNELING = 75645,
 
-	SPELL_DRAIN_VISUAL = 60857,
+	SPELL_NETHERESSENCE_AURA = 75649,
+	SPELL_NETHERESSENCE_VISUAL = 75650,
 
 	// Envolved Twilight Zealot & Twilight Drakonid
+	SPELL_FORCE_BLAST = 76522,
+	SPELL_GRAVITY_STRIKE = 76561,
+	SPELL_GRIEVOUS_WHIRL = 93658,
+	SPELL_SHADOW_STRIKE = 66134,
 };
 
 enum Events
 {
 	EVENT_DARK_COMMAND = 1,
+	
+	EVENT_FORCE_BLAST = 2,
+	EVENT_GRAVITY_STRIKE = 3,
+	EVENT_GRIEVOUS_WHIRL = 4,
+	EVENT_SHADOW_STRIKE = 5,
 };
 
 enum Actions
@@ -107,21 +123,20 @@ public:
 					TwilightZealotsList[i]->Respawn();
 
 				TwilightZealotsList[i]->RemoveAura(SPELL_AURA_OF_ACCELERATION);
-				TwilightZealotsList[i]->RemoveAllControlled();
-				TwilightZealotsList[i]->GetMotionMaster()->MoveTargetedHome();
-
+				TwilightZealotsList[i]->RemoveAura(SPELL_TWILIGHT_EVOLUTION);
+				TwilightZealotsList[i]->RemoveAura(SPELL_EVOLUTION);
+				
+				TwilightZealotsList[i]->NearTeleportTo(summonPositions[i].GetPositionX(),summonPositions[i].GetPositionY(),summonPositions[i].GetPositionZ(),summonPositions[i].GetOrientation());
 
 				if(!TwilightZealotsList[i]->HasAura(SPELL_KNEELING_IN_SUPPLICATION))
 					TwilightZealotsList[i]->CastSpell(TwilightZealotsList[i],SPELL_KNEELING_IN_SUPPLICATION,true);
-
-				TwilightZealotsList[i]->SetReactState(REACT_PASSIVE);
 			}
 
 			// Stops Channeling from the Triggers to the Zealots
 			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
 				NetherEssenceTrigger[i]->GetAI()->DoAction(ACTION_TRIGGER_STOP_CHANNELING);
 
-			DoCast(me, SPELL_DRAIN_ESSENCE_CHANNELING, true);
+			me->CastSpell(me, SPELL_DRAIN_ESSENCE_CHANNELING, true);
 		}
 
 		void EnterCombat(Unit* /*who*/)
@@ -134,6 +149,8 @@ public:
 			// Informs the trigger on what Twilight Zealot he should channel the nether essence
 			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
 				NetherEssenceTrigger[i]->GetAI()->DoAction(ACTION_TRIGGER_START_CHANNELING);
+
+			NetherEssenceTrigger[0]->CastSpell(NetherEssenceTrigger[0], SPELL_NETHERESSENCE_AURA, true);
 
 			DoCastAOE(SPELL_AURA_OF_ACCELERATION);
 
@@ -177,9 +194,92 @@ public:
 
 			me->MonsterYell("There is only one true path of enlightenment! DEATH!", LANG_UNIVERSAL, NULL);
 		}
+
+		void JustReachedHome()
+		{
+			me->CastSpell(me, SPELL_DRAIN_ESSENCE_CHANNELING, true);
+		}
 	};
 };
 
+
+class mob_twilight_zealot : public CreatureScript
+{
+public:
+    mob_twilight_zealot() : CreatureScript("mob_twilight_zealot") { }
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new mob_twilight_zealotAI (creature);
+    }
+
+    struct mob_twilight_zealotAI : public ScriptedAI
+    {
+        mob_twilight_zealotAI(Creature* creature) : ScriptedAI(creature), Intialized(false) {}
+
+		bool Intialized;
+		EventMap events;
+
+		void Reset()
+		{
+			events.Reset();
+			Intialized = false;
+
+			me->SetReactState(REACT_PASSIVE);
+		}
+
+        void UpdateAI(const uint32 Diff)
+        {
+			if(!Intialized && !me->HasAura(SPELL_KNEELING_IN_SUPPLICATION))
+			{
+				events.ScheduleEvent(EVENT_FORCE_BLAST, 10000);
+				events.ScheduleEvent(EVENT_GRAVITY_STRIKE, 22000);
+				events.ScheduleEvent(EVENT_GRIEVOUS_WHIRL, 7000);
+				events.ScheduleEvent(EVENT_SHADOW_STRIKE, 14000);
+
+				Intialized = true;
+
+				me->SetReactState(REACT_AGGRESSIVE);
+
+				me->GetMotionMaster()->MoveChase(GetPlayerAtMinimumRange(1.0f));
+				me->Attack(GetPlayerAtMinimumRange(1.0f), false);
+			}
+
+			if (!me->isInCombat() || me->HasAura(SPELL_TWILIGHT_EVOLUTION))
+                return;
+
+			while (uint32 eventId = events.ExecuteEvent())
+			{
+				switch (eventId)
+				{
+				case EVENT_FORCE_BLAST:
+					if(Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 200, true))
+						DoCast(pTarget,SPELL_FORCE_BLAST);
+
+					events.ScheduleEvent(EVENT_FORCE_BLAST, 10000);
+					break;
+				case EVENT_GRAVITY_STRIKE:
+					DoCastVictim(SPELL_GRAVITY_STRIKE);
+					events.ScheduleEvent(EVENT_GRAVITY_STRIKE, 22000);
+					break;
+				case EVENT_GRIEVOUS_WHIRL:
+					DoCastAOE(SPELL_GRIEVOUS_WHIRL);
+					events.ScheduleEvent(EVENT_GRIEVOUS_WHIRL, 7000);
+					break;
+				case EVENT_SHADOW_STRIKE:
+					DoCastVictim(SPELL_SHADOW_STRIKE);
+					events.ScheduleEvent(EVENT_SHADOW_STRIKE, 14000);
+					break;
+
+				default:
+					break;
+				}
+			}
+
+            DoMeleeAttackIfReady();
+        }
+    };
+};
 
 class mob_corla_netheressence_trigger : public CreatureScript
 {
@@ -197,35 +297,67 @@ public:
 		{
 			channelTarget = NULL;
 			lastTarget = NULL;
-			zealot = NULL,
-
-				creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
-
-			creature->SetReactState(REACT_PASSIVE);
+			zealot = NULL;
 		}
 
 		Unit* zealot;
 		Unit* channelTarget;
 		Unit* lastTarget;
 
+		Map::PlayerList CharmedPlayerList;
+
+		// We need np EventMap becouse we have only 1 Event
+		uint32 uiCheckPlayerIsBetween;
+		uint32 uiNetherEssenceVisual;
+
+		void Reset()
+		{
+			me->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+		}
+
 		void UpdateAI(const uint32 diff)
 		{
 			if (channelTarget == NULL/* || lastTarget == NULL */|| zealot == NULL)
 				return;
 
-			channelTarget = zealot;
-			Map::PlayerList const &PlayerList = me->GetMap()->GetPlayers();
+			if(zealot->HasAura(SPELL_TWILIGHT_EVOLUTION) || zealot->isDead())
+				return;
 
-			if (!PlayerList.isEmpty())
+			if (uiCheckPlayerIsBetween <= diff)
 			{
-				for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
-				{
-					if(i->getSource()->IsInBetween(me, zealot, 2.0f))
-						channelTarget = i->getSource();
-				}
-			}
+				channelTarget = zealot;
+				Map::PlayerList const &PlayerList = me->GetMap()->GetPlayers();
 
-			zealot->SetAuraStack(SPELL_EVOLUTION,channelTarget,channelTarget->GetAuraCount(SPELL_EVOLUTION)+1);
+				if (!PlayerList.isEmpty())
+				{
+					for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
+					{
+						if(i->getSource()->IsInBetween(me, zealot, 1.0f))
+							channelTarget = i->getSource();
+					}
+				}
+
+				zealot->SetAuraStack(SPELL_EVOLUTION,channelTarget,channelTarget->GetAuraCount(SPELL_EVOLUTION)+1);
+				channelTarget->GetAura(SPELL_EVOLUTION)->RefreshDuration();
+
+				if(channelTarget->GetAuraCount(SPELL_EVOLUTION) == 100)
+				{
+					if(channelTarget == zealot)
+					channelTarget->RemoveAllAuras();
+
+					zealot->CastSpell(channelTarget, SPELL_TWILIGHT_EVOLUTION, true);
+				}
+
+				uiCheckPlayerIsBetween = 175;
+
+			} else uiCheckPlayerIsBetween -= diff;
+			
+			
+			if (uiNetherEssenceVisual <= diff)
+			{
+				me->CastSpell(me, SPELL_NETHERESSENCE_VISUAL, true);
+				uiNetherEssenceVisual = urand(3500,4000);
+			} else uiNetherEssenceVisual -= diff;	
 		}
 
 		void IsSummonedBy(Unit* summoner)
@@ -238,13 +370,19 @@ public:
 			switch(action)
 			{
 			case ACTION_TRIGGER_START_CHANNELING:
+				CharmedPlayerList.clearReferences();
+
 				channelTarget = zealot;
+
+				uiCheckPlayerIsBetween = 100;
+				uiNetherEssenceVisual = 500;
 
 				// To avoid that on beginning no spell is casted.
 				lastTarget = me;
 				break;
 
 			case ACTION_TRIGGER_STOP_CHANNELING:
+				me->RemoveAllAuras();
 				lastTarget = channelTarget = NULL;
 				break;
 			}
@@ -255,5 +393,6 @@ public:
 void AddSC_boss_corla_herald_of_twilight()
 {
 	new boss_corla_herald_of_twilight();
+	new mob_twilight_zealot();
 	new mob_corla_netheressence_trigger();
 }
