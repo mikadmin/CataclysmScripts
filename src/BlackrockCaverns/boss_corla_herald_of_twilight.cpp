@@ -46,8 +46,8 @@ enum Events
 
 enum Actions
 {
-	ACTION_TRIGGER_SET_ZEALOT = 1,
-	ACTION_TRIGGER_RESET = 2,
+	ACTION_TRIGGER_START_CHANNELING = 1,
+	ACTION_TRIGGER_STOP_CHANNELING = 2,
 };
 
 Position const summonPositions[4] =
@@ -61,50 +61,48 @@ Position const summonPositions[4] =
 class boss_corla_herald_of_twilight : public CreatureScript
 {
 public:
-    boss_corla_herald_of_twilight() : CreatureScript("boss_corla_herald_of_twilight") { }
+	boss_corla_herald_of_twilight() : CreatureScript("boss_corla_herald_of_twilight") { }
 
-    CreatureAI* GetAI(Creature* creature) const
-    {
-        return new boss_corla_herald_of_twilightAI (creature);
-    }
+	CreatureAI* GetAI(Creature* creature) const
+	{
+		return new boss_corla_herald_of_twilightAI (creature);
+	}
 
-    struct boss_corla_herald_of_twilightAI : public ScriptedAI
-    {
-        boss_corla_herald_of_twilightAI(Creature* creature) : ScriptedAI(creature)
-        {
-            instance = creature->GetInstanceScript();
-
-			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
-				TwilightZealotsList[i] = NULL;
+	struct boss_corla_herald_of_twilightAI : public ScriptedAI
+	{
+		boss_corla_herald_of_twilightAI(Creature* creature) : ScriptedAI(creature)
+		{
+			instance = creature->GetInstanceScript();
 
 			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
-			{
-				NetherEssenceTrigger[i] = me->SummonCreature(NPC_NETHER_ESSENCE_TRIGGER,summonPositions[3],TEMPSUMMON_MANUAL_DESPAWN);
-			}
-        }
+				NetherEssenceTrigger[i] = NULL;
 
-        InstanceScript* instance;
+			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
+				TwilightZealotsList[i] = NULL;	
+		}
+
+		InstanceScript* instance;
 		EventMap events;
 		Creature* TwilightZealotsList[3];
 		Creature* NetherEssenceTrigger[3];
 
-        void Reset()
+		void Reset()
 		{
 			events.Reset();
 			me->GetMotionMaster()->MoveTargetedHome();
 			me->RemoveAllAuras();
 
-			// Stops Channeling from the Triggers to the Zealots
-			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
-				NetherEssenceTrigger[i]->GetAI()->SetData(DATA_TWILIGHT_ZEALOT, NULL);
-
-
 			// Resets Twilight Zealots
 			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
 			{
 				if(TwilightZealotsList[i] == NULL)
-				TwilightZealotsList[i] = me->SummonCreature(NPC_TWILIGHT_ZEALOT_CORLA,summonPositions[i],TEMPSUMMON_MANUAL_DESPAWN);
+					TwilightZealotsList[i] = me->SummonCreature(NPC_TWILIGHT_ZEALOT_CORLA,summonPositions[i],TEMPSUMMON_MANUAL_DESPAWN);
 
+				// Spawns the Trigger if neccesary
+				if(NetherEssenceTrigger[i] == NULL)
+					NetherEssenceTrigger[i] = TwilightZealotsList[i]->SummonCreature(NPC_NETHER_ESSENCE_TRIGGER,summonPositions[3],TEMPSUMMON_MANUAL_DESPAWN);
+
+				// Respawns the Zealots if neccesary
 				if(TwilightZealotsList[i]->isDead())
 					TwilightZealotsList[i]->Respawn();
 
@@ -114,15 +112,19 @@ public:
 
 
 				if(!TwilightZealotsList[i]->HasAura(SPELL_KNEELING_IN_SUPPLICATION))
-				TwilightZealotsList[i]->CastSpell(TwilightZealotsList[i],SPELL_KNEELING_IN_SUPPLICATION,true);
-				
+					TwilightZealotsList[i]->CastSpell(TwilightZealotsList[i],SPELL_KNEELING_IN_SUPPLICATION,true);
+
 				TwilightZealotsList[i]->SetReactState(REACT_PASSIVE);
 			}
+
+			// Stops Channeling from the Triggers to the Zealots
+			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
+				NetherEssenceTrigger[i]->GetAI()->DoAction(ACTION_TRIGGER_STOP_CHANNELING);
 
 			DoCast(me, SPELL_DRAIN_ESSENCE_CHANNELING, true);
 		}
 
-        void EnterCombat(Unit* /*who*/)
+		void EnterCombat(Unit* /*who*/)
 		{
 			me->CastStop();
 			me->GetMotionMaster()->MoveChase(me->getVictim());
@@ -131,17 +133,17 @@ public:
 
 			// Informs the trigger on what Twilight Zealot he should channel the nether essence
 			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
-				NetherEssenceTrigger[i]->GetAI()->SetData(DATA_TWILIGHT_ZEALOT, TwilightZealotsList[i]->GetGUID());
+				NetherEssenceTrigger[i]->GetAI()->DoAction(ACTION_TRIGGER_START_CHANNELING);
 
 			DoCastAOE(SPELL_AURA_OF_ACCELERATION);
 
 			me->MonsterYell("HERETICS! You will suffer for this interruption!", LANG_UNIVERSAL, NULL);
 		}
 
-        void UpdateAI(const uint32 diff)
-        {
-            if (!UpdateVictim())
-                return;
+		void UpdateAI(const uint32 diff)
+		{
+			if (!UpdateVictim())
+				return;
 
 			events.Update(diff);
 
@@ -151,18 +153,21 @@ public:
 				{
 				case EVENT_DARK_COMMAND:
 					if(Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 200, true))
-					DoCast(pTarget,SPELL_DARK_COMMAND);
+						DoCast(pTarget,SPELL_DARK_COMMAND);
 
 					events.ScheduleEvent(EVENT_DARK_COMMAND, 20000);
 					break;
 				}
 			}
 
-            DoMeleeAttackIfReady();
-        }
+			DoMeleeAttackIfReady();
+		}
 
 		void JustDied(Unit* /*killer*/)
 		{
+			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
+				NetherEssenceTrigger[i]->GetAI()->DoAction(ACTION_TRIGGER_STOP_CHANNELING);
+
 			for(uint8 i = 0; i <= RAID_MODE(1,2); i++)
 			{
 				TwilightZealotsList[i]->DespawnOrUnsummon();
@@ -172,61 +177,83 @@ public:
 
 			me->MonsterYell("There is only one true path of enlightenment! DEATH!", LANG_UNIVERSAL, NULL);
 		}
-    };
+	};
 };
 
 
 class mob_corla_netheressence_trigger : public CreatureScript
 {
 public:
-    mob_corla_netheressence_trigger() : CreatureScript("mob_corla_netheressence_trigger") { }
+	mob_corla_netheressence_trigger() : CreatureScript("mob_corla_netheressence_trigger") { }
 
-    CreatureAI* GetAI(Creature* creature) const
-    {
-        return new mob_corla_netheressence_triggerAI (creature);
-    }
+	CreatureAI* GetAI(Creature* creature) const
+	{
+		return new mob_corla_netheressence_triggerAI (creature);
+	}
 
-    struct mob_corla_netheressence_triggerAI : public ScriptedAI
-    {
-        mob_corla_netheressence_triggerAI(Creature* creature) : ScriptedAI(creature), active(false)
+	struct mob_corla_netheressence_triggerAI : public ScriptedAI
+	{
+		mob_corla_netheressence_triggerAI(Creature* creature) : ScriptedAI(creature)
 		{
 			channelTarget = NULL;
 			lastTarget = NULL;
+			zealot = NULL,
+
+				creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+
+			creature->SetReactState(REACT_PASSIVE);
 		}
 
+		Unit* zealot;
 		Unit* channelTarget;
 		Unit* lastTarget;
 
-        void UpdateAI(const uint32 diff)
-        {
-            if (channelTarget == NULL || lastTarget == NULL)
-                return;
-
-
-
-
-
-
-
-        }
-
-		void SetData(uint32 type, uint32 data)
+		void UpdateAI(const uint32 diff)
 		{
-			if(type != DATA_TWILIGHT_ZEALOT)
+			if (channelTarget == NULL/* || lastTarget == NULL */|| zealot == NULL)
 				return;
 
+			channelTarget = zealot;
+			Map::PlayerList const &PlayerList = me->GetMap()->GetPlayers();
 
+			if (!PlayerList.isEmpty())
+			{
+				for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
+				{
+					if(i->getSource()->IsInBetween(me, zealot, 2.0f))
+						channelTarget = i->getSource();
+				}
+			}
 
-
-
-
-			lastTarget = channelTarget;
+			zealot->SetAuraStack(SPELL_EVOLUTION,channelTarget,channelTarget->GetAuraCount(SPELL_EVOLUTION)+1);
 		}
-    };
+
+		void IsSummonedBy(Unit* summoner)
+		{
+			zealot = summoner;
+		}
+
+		void DoAction(const int32 action)
+		{
+			switch(action)
+			{
+			case ACTION_TRIGGER_START_CHANNELING:
+				channelTarget = zealot;
+
+				// To avoid that on beginning no spell is casted.
+				lastTarget = me;
+				break;
+
+			case ACTION_TRIGGER_STOP_CHANNELING:
+				lastTarget = channelTarget = NULL;
+				break;
+			}
+		}
+	};
 };
 
 void AddSC_boss_corla_herald_of_twilight()
 {
-    new boss_corla_herald_of_twilight();
+	new boss_corla_herald_of_twilight();
 	new mob_corla_netheressence_trigger();
 }

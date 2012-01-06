@@ -12,5 +12,7 @@ UPDATE `creature` SET `orientation`=4.710373 WHERE `guid`=1050997 LIMIT 1;
 
 -- Prepares Nether Essence Trigger
 -- Faction fix
-UPDATE `creature_template` SET `faction_A`=14, `faction_H`=14 WHERE `entry`=49526 LIMIT 1;
+UPDATE `creature_template` SET `faction_A`=16, `faction_H`=16 WHERE `entry`=49526 LIMIT 1;
 UPDATE `creature_template` SET `InhabitType`=7 WHERE `entry`=49526 LIMIT 1;
+
+UPDATE `creature_template` SET `ScriptName`='mob_corla_netheressence_trigger' WHERE `entry`=49526 LIMIT 1;
