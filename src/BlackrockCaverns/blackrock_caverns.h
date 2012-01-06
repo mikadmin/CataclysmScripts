@@ -27,6 +27,8 @@ enum Data {
 	DATA_BEAUTY_EVENT,
 	DATA_ASCENDANT_LORD_OBSIDIUS_EVENT,
 	DATA_TEAM_IN_INSTANCE_EVENT,
+
+	DATA_TWILIGHT_ZEALOT,
 };
 
 enum Data64 {
@@ -74,6 +76,11 @@ enum CreatureIds {
 	// Karsh Steelbender
 	NPC_BOUND_FLAMES = 50417,
 	NPC_LAVA_SPOUT_TRIGGER = 49529,
+
+	// Corla, Herald of Twilight
+	NPC_TWILIGHT_ZEALOT_CORLA = 50284,
+	NPC_NETHER_ESSENCE_TRIGGER = 49526,
+
 };
 
 enum GameObjectIds {
