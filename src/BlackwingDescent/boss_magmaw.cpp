@@ -15,6 +15,11 @@
 * with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**********
+* Script Coded by Naios
+* Script Complete 20% (or less)
+**********/
+
 #include "ScriptPCH.h"
 #include "blackwing_descent.h"
 
@@ -31,6 +36,11 @@ enum Spells
 
 	// Pillar of Flame
 	SPELL_PILLAR_OF_FLAME = 78006,
+	SPELL_PARASITE_SPAWN = 77970, // 77973, // (With Ground Effect)
+	//SPELL_PARASITE_SPAWN_WITH_LAVA = 77970,
+	SPELL_LAVA_EFFECT = 91918,
+
+	SPELL_PARASITIC_INFECTION = 78941,
 
 	// Ignition
 	SPELL_IGNITION_AURA = 92131,
@@ -43,6 +53,7 @@ enum Events
 	EVENT_LAVA_SPEW = 2,
 	EVENT_IN_RANGE_CHECK =3,
 	EVENT_MANGLE = 4,
+	EVENT_PILLAR_OF_FLAME = 5,
 };
 
 Position const IgnitionPositions[2][21] =
@@ -106,7 +117,7 @@ public:
 
 	struct boss_magmawAI : public ScriptedAI
 	{
-		boss_magmawAI(Creature* creature) : ScriptedAI(creature), head(NULL)
+		boss_magmawAI(Creature* creature) : ScriptedAI(creature), head(NULL), vehicle(creature->GetVehicleKit())
 		{
 			instance = creature->GetInstanceScript();
 		}
@@ -115,6 +126,7 @@ public:
 		EventMap events;
 		Creature* head;
 		bool IsInHeadPhase;
+		Vehicle* vehicle;
 
 		void Reset()
 		{
@@ -129,7 +141,7 @@ public:
 				head->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 			}
 
-			IsInHeadPhase = true;
+			IsInHeadPhase = false;
 
 			DespawnMinions();
 		}
@@ -139,6 +151,11 @@ public:
 			events.ScheduleEvent(EVENT_MAGMA_SPIT, urand(11000,13000));
 			events.ScheduleEvent(EVENT_LAVA_SPEW, urand(7000,9000));
 			events.ScheduleEvent(EVENT_IN_RANGE_CHECK, 5000);
+			//events.ScheduleEvent(EVENT_PILLAR_OF_FLAME, urand(8000,9000));
+
+			events.ScheduleEvent(EVENT_MANGLE, 10000);
+
+			DoZoneInCombat(head);
 		}
 
 		void UpdateAI(const uint32 diff)
@@ -149,6 +166,12 @@ public:
 			// If Magmaw is in Head Phase
 			if(IsInHeadPhase)
 			{
+
+
+
+
+
+
 				CastIgnition();
 				
 				IsInHeadPhase = false;
@@ -162,14 +185,14 @@ public:
 				switch(eventId)
 				{
 				case EVENT_MAGMA_SPIT:
-					CastSpellOnPlayers(SPELL_MAGMA_SPIT);
+					if(Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 200, true))
+						DoCast(pTarget,SPELL_MAGMA_SPIT);
 
 					events.ScheduleEvent(EVENT_MAGMA_SPIT, urand(15000,17000));
 					break;
 
 				case EVENT_LAVA_SPEW: 
-					if(Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 200, true))
-						DoCast(pTarget,SPELL_LAVA_SPEW);
+					DoCastAOE(SPELL_LAVA_SPEW);
 
 					events.ScheduleEvent(EVENT_LAVA_SPEW, urand(7000,9000));
 					break;
@@ -183,7 +206,19 @@ public:
 
 				case EVENT_MANGLE:
 					DoCastVictim(SPELL_MANGLE);
+
+					vehicle->AddPassenger(me->getVictim(),1);
+
+					IsInHeadPhase = true;
+
 					events.ScheduleEvent(EVENT_LAVA_SPEW, urand(95000,115000));
+					break;
+
+				case EVENT_PILLAR_OF_FLAME:
+					if(Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 500, true))
+						me->SummonCreature(NPC_PILLAR_OF_FLAME_TRIGGER,target->GetPositionX(),target->GetPositionY(),target->GetPositionZ(), 0,TEMPSUMMON_MANUAL_DESPAWN);		
+
+					events.ScheduleEvent(EVENT_PILLAR_OF_FLAME, urand(20000,25000));
 					break;
 				}
 			}
@@ -234,6 +269,7 @@ public:
 		inline void DespawnMinions()
 		{
 			DespawnCreatures(NPC_IGNITION_TRIGGER);
+			DespawnCreatures(NPC_LAVA_PARASITE);
 		}
 
 		void DespawnCreatures(uint32 entry)
@@ -249,7 +285,6 @@ public:
 		}
 	};
 };
-
 
 class mob_magmaws_head : public CreatureScript
 {
@@ -284,6 +319,85 @@ public:
 	};
 };
 
+class mob_pillar_of_flame_trigger : public CreatureScript
+{
+public:
+    mob_pillar_of_flame_trigger() : CreatureScript("mob_pillar_of_flame_trigger") { }
+
+    CreatureAI* GetAI(Creature* creature) const
+    {
+        return new mob_pillar_of_flame_triggerAI (creature);
+    }
+
+    struct mob_pillar_of_flame_triggerAI : public ScriptedAI
+    {
+        mob_pillar_of_flame_triggerAI(Creature* creature) : ScriptedAI(creature),Intialized(false) { }
+		
+		uint32 uiErruptTime;
+		bool Intialized;
+
+		void IsSummonedBy(Unit* summoner)
+		{
+			me->SetReactState(REACT_PASSIVE);
+			me->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+			
+			DoCastAOE(SPELL_PILLAR_OF_FLAME,true);
+			
+			uiErruptTime = 5000;
+			Intialized = true;
+		}
+
+        void UpdateAI(const uint32 diff)
+        {
+			if(!Intialized)
+				return;
+
+            if (uiErruptTime <= diff)
+			{
+				me->DespawnOrUnsummon();
+
+			} else uiErruptTime -= diff;
+        }
+    };
+};
+
+class spell_pillar_of_flame : public SpellScriptLoader
+{
+    public:
+        spell_pillar_of_flame() : SpellScriptLoader("spell_pillar_of_flame") { }
+
+        class spell_pillar_of_flame_SpellScript : public SpellScript
+        {
+            PrepareSpellScript(spell_pillar_of_flame_SpellScript)
+
+            bool Validate(SpellEntry const * spellEntry) {return true;}
+            
+			bool Load()
+			{
+
+				return true;
+			}
+            void Unload()
+			{
+
+			}
+
+			void HandleOnHit()
+            {
+                GetCaster()->GetAI()->DoCastAOE(SPELL_PARASITE_SPAWN,true);
+            }
+
+            void Register()
+            {
+				OnHit += SpellHitFn(spell_pillar_of_flame_SpellScript::HandleOnHit);
+            }
+        };
+
+        SpellScript *GetSpellScript() const
+        {
+            return new spell_pillar_of_flame_SpellScript();
+        }
+};
 
 class spell_parasitic_infection : public SpellScriptLoader
 {
@@ -297,15 +411,10 @@ public:
 		void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
 		{
 			Unit * caster = GetCaster();
-			for (int i = 0; i < 2; ++i)
+			
+			for (int i = 0; i < 3; ++i)
 			{
-				Unit* Summoned = caster->SummonCreature(42321, caster->GetPositionX(), caster->GetPositionY(), caster->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 240000);
-				/*if (Summoned)
-				{
-				Unit *pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0);
-				if (pTarget)
-				Summoned->AddThreat(pTarget, 1.0f);
-				}*/
+				caster->SummonCreature(NPC_LAVA_PARASITE, caster->GetPositionX(), caster->GetPositionY(), caster->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 240000)->setActive(true);
 			}
 		}
 
@@ -324,6 +433,8 @@ public:
 void AddSC_boss_magmaw()
 {
 	new boss_magmaw();
-	new mob_magmaws_head();
+	//new mob_magmaws_head();
+	new mob_pillar_of_flame_trigger();
+	new spell_pillar_of_flame();
 	new spell_parasitic_infection();
 }
