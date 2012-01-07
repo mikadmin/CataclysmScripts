@@ -45,6 +45,10 @@ enum Spells
 	// Ignition
 	SPELL_IGNITION_AURA = 92131,
 	SPELL_IGNITION_TRIGGER_SPAWN = 92121,
+
+
+	// Magmas Head
+	SPELL_POINT_OF_VULNERABILITY = 79011,
 };
 
 enum Events
@@ -54,6 +58,7 @@ enum Events
 	EVENT_IN_RANGE_CHECK =3,
 	EVENT_MANGLE = 4,
 	EVENT_PILLAR_OF_FLAME = 5,
+	EVENT_LEAVE_HEAD_PHASE = 6,
 };
 
 Position const IgnitionPositions[2][21] =
@@ -120,6 +125,7 @@ public:
 		boss_magmawAI(Creature* creature) : ScriptedAI(creature), head(NULL), vehicle(creature->GetVehicleKit())
 		{
 			instance = creature->GetInstanceScript();
+			ASSERT(vehicle);
 		}
 
 		InstanceScript* instance;
@@ -134,13 +140,6 @@ public:
 
 			me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
 
-			head =  me->FindNearestCreature(NPC_MAGMAWS_HEAD,1000.0f, true);
-			if(head != NULL)
-			{
-				head->SetReactState(REACT_PASSIVE);
-				head->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
-			}
-
 			IsInHeadPhase = false;
 
 			DespawnMinions();
@@ -151,7 +150,7 @@ public:
 			events.ScheduleEvent(EVENT_MAGMA_SPIT, urand(11000,13000));
 			events.ScheduleEvent(EVENT_LAVA_SPEW, urand(7000,9000));
 			events.ScheduleEvent(EVENT_IN_RANGE_CHECK, 5000);
-			//events.ScheduleEvent(EVENT_PILLAR_OF_FLAME, urand(8000,9000));
+			events.ScheduleEvent(EVENT_PILLAR_OF_FLAME, urand(8000,9000));
 
 			events.ScheduleEvent(EVENT_MANGLE, 10000);
 
@@ -160,23 +159,17 @@ public:
 
 		void UpdateAI(const uint32 diff)
 		{
+			if(head != NULL && !IsInHeadPhase)
+			{
+				head->SetReactState(REACT_PASSIVE);
+				head->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+			}else if(head == NULL)
+			{
+				head =  me->FindNearestCreature(NPC_MAGMAWS_HEAD,1000.0f, true);
+			}
+
 			if (!UpdateVictim())
 				return;
-
-			// If Magmaw is in Head Phase
-			if(IsInHeadPhase)
-			{
-
-
-
-
-
-
-				CastIgnition();
-				
-				IsInHeadPhase = false;
-				return;
-			}
 
 			events.Update(diff);
 
@@ -184,6 +177,8 @@ public:
 			{
 				switch(eventId)
 				{
+					if(!IsInHeadPhase)
+					{
 				case EVENT_MAGMA_SPIT:
 					if(Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 200, true))
 						DoCast(pTarget,SPELL_MAGMA_SPIT);
@@ -207,10 +202,17 @@ public:
 				case EVENT_MANGLE:
 					DoCastVictim(SPELL_MANGLE);
 
-					vehicle->AddPassenger(me->getVictim(),1);
+					me->getVictim()->EnterVehicle(me);
 
+					if(head != NULL)
+					{
+						head->CastSpell(head,SPELL_POINT_OF_VULNERABILITY, true);
+						head->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
+					}
+					
 					IsInHeadPhase = true;
 
+					events.ScheduleEvent(EVENT_LEAVE_HEAD_PHASE, 10000);
 					events.ScheduleEvent(EVENT_LAVA_SPEW, urand(95000,115000));
 					break;
 
@@ -220,6 +222,16 @@ public:
 
 					events.ScheduleEvent(EVENT_PILLAR_OF_FLAME, urand(20000,25000));
 					break;
+					}else
+					{
+				case EVENT_LEAVE_HEAD_PHASE:
+
+
+
+					CastIgnition();
+					IsInHeadPhase = false;
+					break;
+					}
 				}
 			}
 
@@ -298,23 +310,33 @@ public:
 
 	struct mob_magmaws_headAI : public ScriptedAI
 	{
-		mob_magmaws_headAI(Creature* creature) : ScriptedAI(creature)
+		mob_magmaws_headAI(Creature* creature) : ScriptedAI(creature), magmaw(NULL)
 		{
 			instance = creature->GetInstanceScript();
 		}
 
 		InstanceScript* instance;
 
-		void Reset() {}
+		Creature* magmaw;
+
+		void Reset()
+		{
+			if(magmaw == NULL)
+			magmaw =  me->FindNearestCreature(NPC_MAGMAW,1000.0f, true);
+		}
 
 		void EnterCombat(Unit* /*who*/) {}
 
 		void UpdateAI(const uint32 Diff)
 		{
-			if (!UpdateVictim())
-				return;
+			
+		}
 
-			DoMeleeAttackIfReady();
+		void DamageTaken(Unit* who, uint32& damage)
+		{
+			magmaw->SetHealth(magmaw->GetHealth()-damage);
+
+			damage = 0;
 		}
 	};
 };
@@ -342,6 +364,7 @@ public:
 			me->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 			
 			DoCastAOE(SPELL_PILLAR_OF_FLAME,true);
+			DoCastAOE(SPELL_PARASITE_SPAWN,true);
 			
 			uiErruptTime = 5000;
 			Intialized = true;
@@ -359,44 +382,6 @@ public:
 			} else uiErruptTime -= diff;
         }
     };
-};
-
-class spell_pillar_of_flame : public SpellScriptLoader
-{
-    public:
-        spell_pillar_of_flame() : SpellScriptLoader("spell_pillar_of_flame") { }
-
-        class spell_pillar_of_flame_SpellScript : public SpellScript
-        {
-            PrepareSpellScript(spell_pillar_of_flame_SpellScript)
-
-            bool Validate(SpellEntry const * spellEntry) {return true;}
-            
-			bool Load()
-			{
-
-				return true;
-			}
-            void Unload()
-			{
-
-			}
-
-			void HandleOnHit()
-            {
-                GetCaster()->GetAI()->DoCastAOE(SPELL_PARASITE_SPAWN,true);
-            }
-
-            void Register()
-            {
-				OnHit += SpellHitFn(spell_pillar_of_flame_SpellScript::HandleOnHit);
-            }
-        };
-
-        SpellScript *GetSpellScript() const
-        {
-            return new spell_pillar_of_flame_SpellScript();
-        }
 };
 
 class spell_parasitic_infection : public SpellScriptLoader
@@ -435,6 +420,5 @@ void AddSC_boss_magmaw()
 	new boss_magmaw();
 	//new mob_magmaws_head();
 	new mob_pillar_of_flame_trigger();
-	new spell_pillar_of_flame();
 	new spell_parasitic_infection();
 }

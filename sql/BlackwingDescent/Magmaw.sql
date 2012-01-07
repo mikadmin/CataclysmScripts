@@ -33,8 +33,7 @@ UPDATE `creature_template` SET `modelid1`=11686, `modelid2`=0 WHERE `entry`=4944
 
 -- Spell Scriptnames
 REPLACE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES
-(78006, 'spell_pillar_of_flame'),
-(78941, 'spell_pillar_of_flame');
+(78941, 'spell_parasitic_infection');
 
 -- Lava parasites
 UPDATE `creature_template` SET `faction_A`=16, `faction_H`=16 WHERE `entry`=41806 LIMIT 1;
@@ -43,6 +42,7 @@ UPDATE `creature_template` SET `Health_mod`=2, `exp`=3 WHERE `entry`=41806 LIMIT
 -- Lava Parisites Trigger
 UPDATE `creature_template` SET `AIName`='', `ScriptName`='mob_pillar_of_flame_trigger' WHERE `entry`=41843 LIMIT 1;
 UPDATE `creature_template` SET `faction_A`=16, `faction_H`=16 WHERE `entry`=41843 LIMIT 1;
+UPDATE `creature_template` SET `modelid1`=11686, `modelid2`=0 WHERE `entry`=41843 LIMIT 1;
 
 -- Lava Parasite
 SET @ENTRY := 41806;
