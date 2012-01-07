@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2008 - 2011 TrinityCore <http://www.trinitycore.org/>
  *
- * Copyright (C) 2011 TrilliumEMU <http://www.arkania.net/>
+ * Copyright (C) 2011 ArkCORE <http://www.arkania.net/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -54,13 +54,13 @@ class instance_blackwing_descent : public InstanceMapScript
 
             void SetData(uint32 Type, uint32 Data)
             {
-                //Encounter[Type] = Data;
-				/*
+                Encounter[Type] = Data;
+
                 if (Data == DONE)
                 {
                     RewardValorPoints();
                     SaveToDB();
-                }*/
+                }
             }
 
             std::string GetSaveData()
