@@ -54,6 +54,11 @@ enum Spells
 
 	// Magmas Head
 	SPELL_POINT_OF_VULNERABILITY = 79011,
+	SPELL_RIDE_VEHICLE = 78360, // From DBC Sniffs
+
+	// Vehicle
+	SPELL_LAUNCH_HOOK = 77917,
+
 };
 
 enum Events
@@ -231,7 +236,7 @@ public:
 
 					events.ScheduleEvent(EVENT_LEAVE_HEAD_PHASE, 10000);
 					events.ScheduleEvent(EVENT_LAVA_SPEW, urand(95000,115000));
-
+					DoCastVictim(SPELL_RIDE_VEHICLE, true);
 					DoCastVictim(88287);
 					break;
 

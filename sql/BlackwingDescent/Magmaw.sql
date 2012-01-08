@@ -4,8 +4,11 @@
 DELETE FROM `vehicle_accessory` WHERE `entry` = 41570;
 INSERT INTO `vehicle_accessory` (`entry`, `accessory_entry`, `seat_id`, `minion`, `description`)
 VALUES (41570, 42347, 0, 0, 'Magmaws Head');
-UPDATE `creature_template` SET `VehicleId`=1408	 WHERE `entry`=41570 LIMIT 1;
+UPDATE `creature_template` SET `VehicleId`=522	 WHERE `entry`=41570 LIMIT 1;
 UPDATE `creature_template` SET `IconName`='' WHERE `entry`=41570 LIMIT 1;
+
+-- Adds the launch hook ability to the Magmaw vehicle
+UPDATE `creature_template` SET `spell1`=77917 WHERE `entry`=41570 LIMIT 1;
 
 -- Notes to find the right VehicleID
 -- 1443 Kopf oben aber nicht sichtbar
