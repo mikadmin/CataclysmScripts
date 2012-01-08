@@ -17,19 +17,24 @@
 
 /**********
 * Script Coded by Naios
-* Script Complete 20% (or less)
+* Script Complete 60% (or less)
 **********/
+
+/* Notes:
+- The Rodeo Phase (Mangle, Constricting Chains is not working ...)
+- The Parasitic Infection Debuff is not working
+*/
 
 #include "ScriptPCH.h"
 #include "blackwing_descent.h"
 
+#define SPELL_LAVA_SPEW RAID_MODE(77690, 91919, 91931, 91932)
+#define SPELL_MAGMA_SPIT RAID_MODE(78068, 91917, 91927, 91928)
+#define SPELL_MANGLE RAID_MODE(89773, 91912, 94616, 94617)
+
 enum Spells
 {
-	SPELL_MAGMA_SPIT = 91928,
-	SPELL_LAVA_SPEW = 91931,
-
-	SPELL_MANGLE = 89773,
-
+	SPELL_BERSERK = 26662,
 	SPELL_MOLTEN_TANTRUM = 78403, // If no Player is in melee Range
 
 	SPELL_MASSIVE_CRASH = 91921,
@@ -59,6 +64,8 @@ enum Events
 	EVENT_MANGLE = 4,
 	EVENT_PILLAR_OF_FLAME = 5,
 	EVENT_LEAVE_HEAD_PHASE = 6,
+
+	EVENT_BERSERK = 7,
 };
 
 Position const IgnitionPositions[2][21] =
@@ -110,6 +117,12 @@ Position const IgnitionPositions[2][21] =
 {-295.83f, -46.4565f, 212.04f, 1.27344f},
 }};
 
+Position const HeroicPositions[2] =
+{
+{-302.969055f, -7.754232f, 245.336243f, 4.261655f}, // Nefarians Position
+{-295.83f, -46.4565f, 212.04f, 1.27344f}, // Blazing Bone Construct Spawning Position
+};
+
 class boss_magmaw : public CreatureScript
 {
 public:
@@ -122,17 +135,15 @@ public:
 
 	struct boss_magmawAI : public ScriptedAI
 	{
-		boss_magmawAI(Creature* creature) : ScriptedAI(creature), head(NULL), vehicle(creature->GetVehicleKit())
+		boss_magmawAI(Creature* creature) : ScriptedAI(creature), head(NULL)
 		{
 			instance = creature->GetInstanceScript();
-			ASSERT(vehicle);
 		}
 
 		InstanceScript* instance;
 		EventMap events;
 		Creature* head;
 		bool IsInHeadPhase;
-		Vehicle* vehicle;
 
 		void Reset()
 		{
@@ -153,6 +164,13 @@ public:
 			events.ScheduleEvent(EVENT_PILLAR_OF_FLAME, urand(8000,9000));
 
 			events.ScheduleEvent(EVENT_MANGLE, 10000);
+			events.ScheduleEvent(EVENT_BERSERK, 600000); // 10 Min
+
+			if(me->GetMap()->IsHeroic())
+			{
+				Creature* nefarian = me->SummonCreature(NPC_NEFARIAN_HELPER_HEROIC, HeroicPositions[0], TEMPSUMMON_MANUAL_DESPAWN);
+				nefarian->AI()->DoZoneInCombat();
+			}
 
 			DoZoneInCombat(head);
 		}
@@ -180,9 +198,10 @@ public:
 					if(!IsInHeadPhase)
 					{
 				case EVENT_MAGMA_SPIT:
+					// Maybe we have to cast the spell on all Players
 					if(Unit* pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 200, true))
 						DoCast(pTarget,SPELL_MAGMA_SPIT);
-
+					
 					events.ScheduleEvent(EVENT_MAGMA_SPIT, urand(15000,17000));
 					break;
 
@@ -193,8 +212,7 @@ public:
 					break;
 
 				case EVENT_IN_RANGE_CHECK:
-					if(me->getVictim()->GetDistance(me) > 1)	
-						instance->DoCastSpellOnPlayers(SPELL_MOLTEN_TANTRUM);
+					DoCast(me, SPELL_MOLTEN_TANTRUM);
 
 					events.ScheduleEvent(EVENT_IN_RANGE_CHECK, 5000);
 					break;
@@ -202,10 +220,9 @@ public:
 				case EVENT_MANGLE:
 					DoCastVictim(SPELL_MANGLE);
 
-					me->getVictim()->EnterVehicle(me);
-
 					if(head != NULL)
 					{
+						//me->getVictim()->EnterVehicle(head);
 						head->CastSpell(head,SPELL_POINT_OF_VULNERABILITY, true);
 						head->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
 					}
@@ -214,20 +231,28 @@ public:
 
 					events.ScheduleEvent(EVENT_LEAVE_HEAD_PHASE, 10000);
 					events.ScheduleEvent(EVENT_LAVA_SPEW, urand(95000,115000));
+
+					DoCastVictim(88287);
 					break;
 
 				case EVENT_PILLAR_OF_FLAME:
 					if(Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 500, true))
-						me->SummonCreature(NPC_PILLAR_OF_FLAME_TRIGGER,target->GetPositionX(),target->GetPositionY(),target->GetPositionZ(), 0,TEMPSUMMON_MANUAL_DESPAWN);		
+						me->SummonCreature(NPC_PILLAR_OF_FLAME_TRIGGER,target->GetPositionX(),target->GetPositionY(),target->GetPositionZ(), 0,TEMPSUMMON_CORPSE_DESPAWN);		
 
 					events.ScheduleEvent(EVENT_PILLAR_OF_FLAME, urand(20000,25000));
 					break;
+
+				case EVENT_BERSERK:
+					DoCast(me, SPELL_BERSERK);
+					break;
+
 					}else
 					{
 				case EVENT_LEAVE_HEAD_PHASE:
 
 
-
+					
+					DoCastAOE(SPELL_MASSIVE_CRASH);
 					CastIgnition();
 					IsInHeadPhase = false;
 					break;
@@ -282,6 +307,9 @@ public:
 		{
 			DespawnCreatures(NPC_IGNITION_TRIGGER);
 			DespawnCreatures(NPC_LAVA_PARASITE);
+
+			DespawnCreatures(NPC_NEFARIAN_HELPER_HEROIC);
+			DespawnCreatures(NPC_BLAZING_BONE_CONSTRUCT);
 		}
 
 		void DespawnCreatures(uint32 entry)
@@ -310,13 +338,16 @@ public:
 
 	struct mob_magmaws_headAI : public ScriptedAI
 	{
-		mob_magmaws_headAI(Creature* creature) : ScriptedAI(creature), magmaw(NULL)
+		mob_magmaws_headAI(Creature* creature) : ScriptedAI(creature), magmaw(NULL), vehicle(creature->GetVehicleKit())
 		{
 			instance = creature->GetInstanceScript();
+			ASSERT(vehicle);
 		}
 
 		InstanceScript* instance;
+		EventMap events;
 
+		Vehicle* vehicle;
 		Creature* magmaw;
 
 		void Reset()
@@ -334,6 +365,9 @@ public:
 
 		void DamageTaken(Unit* who, uint32& damage)
 		{
+			if(magmaw == NULL)
+				return;
+
 			magmaw->SetHealth(magmaw->GetHealth()-damage);
 
 			damage = 0;
@@ -363,7 +397,7 @@ public:
 			me->SetReactState(REACT_PASSIVE);
 			me->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
 			
-			DoCastAOE(SPELL_PILLAR_OF_FLAME,true);
+			//DoCastAOE(SPELL_PILLAR_OF_FLAME,true); // This is only for DBM warnings etc...
 			DoCastAOE(SPELL_PARASITE_SPAWN,true);
 			
 			uiErruptTime = 5000;
@@ -395,12 +429,13 @@ public:
 
 		void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
 		{
-			Unit * caster = GetCaster();
+			if(Unit * caster = GetCaster())
+				caster->CastSpell(caster,77973,true);
 			
-			for (int i = 0; i < 3; ++i)
+			/*for (int i = 0; i < 3; ++i)
 			{
 				caster->SummonCreature(NPC_LAVA_PARASITE, caster->GetPositionX(), caster->GetPositionY(), caster->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 240000)->setActive(true);
-			}
+			}*/
 		}
 
 		void Register()
@@ -418,7 +453,7 @@ public:
 void AddSC_boss_magmaw()
 {
 	new boss_magmaw();
-	//new mob_magmaws_head();
+	new mob_magmaws_head();
 	new mob_pillar_of_flame_trigger();
 	new spell_parasitic_infection();
 }
