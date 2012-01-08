@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2008 - 2011 TrinityCore <http://www.trinitycore.org/>
  *
- * Copyright (C) 2011 ArkCORE <http://www.arkania.net/>
+ * Copyright (C) 2011 - 2012 ArkCORE <http://www.arkania.net/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -74,7 +74,7 @@ public:
             return false;
         }
 
-        void OnCreatureCreate(Creature* creature)
+        void OnCreatureCreate(Creature* creature, bool )
         {
             switch (creature->GetEntry())
             {
@@ -93,9 +93,9 @@ public:
             }
         }
 
-        uint64 GetData64(uint32 data)
+        uint64 getData64(uint32 identifier)
         {
-            switch (data)
+            switch (identifier)
             {
                 case DATA_GENERAL_UMBRISS:
                     return GeneralUmbriss;
