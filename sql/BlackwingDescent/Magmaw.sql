@@ -7,9 +7,6 @@ VALUES (41570, 42347, 0, 0, 'Magmaws Head');
 UPDATE `creature_template` SET `VehicleId`=522	 WHERE `entry`=41570 LIMIT 1;
 UPDATE `creature_template` SET `IconName`='' WHERE `entry`=41570 LIMIT 1;
 
--- Adds the launch hook ability to the Magmaw vehicle
-UPDATE `creature_template` SET `spell1`=77917 WHERE `entry`=41570 LIMIT 1;
-
 -- Notes to find the right VehicleID
 -- 1443 Kopf oben aber nicht sichtbar
 -- 1442 sehr gut aber kopf verdreht sitzt richtig und so
@@ -23,11 +20,14 @@ DELETE FROM `smart_scripts` WHERE `entryorguid` = 41570;
 
 -- Updates Magmaws Head
 UPDATE `creature_template` SET `faction_A`=16, `faction_H`=16 WHERE `entry`=42347 LIMIT 1;
-UPDATE `creature_template` SET `VehicleId`=1277	 WHERE `entry`=42347 LIMIT 1;
+UPDATE `creature_template` SET `VehicleId`=516	 WHERE `entry`=42347 LIMIT 1;
 
 UPDATE `creature_template` SET `AIName`='', `ScriptName`='mob_magmaws_head' WHERE `entry`=42347 LIMIT 1;
 DELETE FROM `smart_scripts` WHERE `entryorguid` = 42347;
 UPDATE `creature_template` SET `IconName`='vehichleCursor' WHERE `entry`=42347 LIMIT 1;
+
+-- Adds the launch hook ability to the Magmaw Head vehicle
+UPDATE `creature_template` SET `spell1`=77917 WHERE `entry`=41570 LIMIT 1;
 
 -- Delete non Blizzlike spawned ads
 DELETE FROM `creature` WHERE `guid` IN(6521578, 6521576) AND `id` = 42362;
