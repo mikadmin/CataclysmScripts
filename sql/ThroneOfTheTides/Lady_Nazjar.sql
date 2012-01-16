@@ -2,7 +2,7 @@
 -- by Naios
 
 -- She is spawned twice...
-DELETE FROM `creature` WHERE `guid` = 1086658 AND `id` = 40586;
+DELETE FROM `creature` WHERE `guid` = 1086658 AND `id` = 39959;
 
 -- Every time the same smartAI at the boss^^
 UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_lady_nazjar' WHERE `entry`=40586 LIMIT 1;
