@@ -61,6 +61,7 @@ public:
              if (instance->IsHeroic())
                  uiSinestra = 0;
              uiAscendantCouncilPhase = 1;
+			 uiAscentMonstrosityHealth = 400;
         }
 
 		bool IsEncounterInProgress() const
@@ -231,6 +232,12 @@ public:
                 case DATA_SINESTRA_EVENT:
                     uiEncounter[4] = data;
                     break;
+				case DATA_ASCENDANT_PHASE:
+					uiAscendantCouncilPhase = data;
+					break;
+				case DATA_ASCENDANT_MONSTROSITY_LIVE:
+					uiAscentMonstrosityHealth = data;
+					break;
 			}
 
 			if (data == DONE)
@@ -246,6 +253,8 @@ public:
                 case DATA_COUNCIL_EVENT:					return uiEncounter[2];
 				case DATA_CHOGALL_EVENT:					return uiEncounter[3];
                 case DATA_SINESTRA_EVENT:                   return uiEncounter[4];
+				case DATA_ASCENDANT_PHASE:					return uiAscendantCouncilPhase;
+				case DATA_ASCENDANT_MONSTROSITY_LIVE:		return uiAscentMonstrosityHealth;
             }
 
             return 0;
@@ -378,21 +387,6 @@ public:
             }
         }
 
-        void ShiftPhase()
-        {
-            uiAscendantCouncilPhase++;
-            if (uiAscendantCouncilPhase == 2)
-            {
-                ChangeState(GetData64(DATA_FELUDIUS),false,false);
-                ChangeState(GetData64(DATA_IGNACIOUS),false,false);
-                ChangeState(GetData64(DATA_ARION),true,false);
-                ChangeState(GetData64(DATA_TERRASTRA),true,false);
-            }
-            else if (uiAscendantCouncilPhase == 3)
-            {
-            }
-        }
-
 		void Update(uint32 diff)
 		{
 			if (uiHalfusNormalTimer <= diff)
@@ -446,6 +440,7 @@ public:
 		uint32 uiTeamInInstance;
 		uint32 uiEncounter[MAX_ENCOUNTER];
         uint8  uiAscendantCouncilPhase;
+		uint64 uiAscentMonstrosityHealth;
 	};
 };
 void AddSC_instance_the_bastion_of_twilight()
