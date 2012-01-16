@@ -122,14 +122,6 @@ enum MovePoints
     POINT_CYCLON_WIND,
 };
 
-enum Actions
-{
-    ACTION_VALIONA_AIRBORNE,
-    ACTION_THERALION_AIRBORNE,
-    ACTION_IGNACIOUS_JUMPS,
-    ACTION_INGACIOUS_CHARGE,
-};
-
 static const Position Positions[2] =
 {
 	{5.2541615f,1.5149917f,4.9161961f,0.0000001f},
