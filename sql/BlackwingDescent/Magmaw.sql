@@ -1,4 +1,4 @@
--- Mahmaw (Blackwing Descent) Updates
+-- Magmaw (Blackwing Descent) Updates
 -- by Naios
 
 DELETE FROM `vehicle_accessory` WHERE `entry` = 41570;
