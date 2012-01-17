@@ -19,3 +19,5 @@ VALUES (82699, 82700, 1, 'Feludius - Water Bomb AOE Damage');
 */
 REPLACE INTO `spell_script_names` (`spell_id`, `ScriptName`)
 VALUES (82665, 'spell_heart_of_ice');
+
+DELETE FROM `creature` WHERE `id` = 43686;
