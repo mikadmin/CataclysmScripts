@@ -61,95 +61,22 @@ enum Events
 	EVENT_AEGIS_OF_FLAME = 7,
 
 	EVENT_INFERNO_LEAP = 8,
-	EVENT_INFERNO_RUSH = 9
+	EVENT_INFERNO_RUSH = 9,
+
+	EVENT_EVENT_GO_IN_DELAY = 10,
 };
 
-Position const position[5] =
+Position const position[7] =
 {
 	{-1055.08f, -601.279f, 835.118f, 0.4208f},	// Spawning Position of Arion
 	{-1055.06f, -563.935f, 835.116f, 5.81653f},	// Spawning Position of Terrastra
-	{-435.54f, -695.072f, 280.316f, 3.4010f},	// ToDo Spawning Position of Feludius (Event)
-	{-435.54f, -695.072f, 268.687f, 3.4010f},	// ToDo Spawning Position of Ignacius (Event)
-	{-375.742f, -519.749f, 300.663f, 0.0f}		// ToDo Center of the Room
-};
 
-/****************
-* Ascendant Dummy AI
-****************/
+	{-981.228f, -555.352f, 831.902f, 3.75152f},	// ToDo Spawning Position of Arion (Event)
+	{-1033.85f, -607.193f, 833.222f, 0.743418f},	// ToDo Spawning Position of Terrastra (Event)
+	{-980.955f, -610.725f, 831.903f, 2.29068f},	// ToDo Spawning Position of Feludius (Event)
+	{-1034.14f, -557.533f, 833.45f, 5.50688f},	// ToDo Spawning Position of Ignacius (Event)
 
-struct dummy_ascendant_AI : public ScriptedAI
-{
-	dummy_ascendant_AI(Creature* creature) : ScriptedAI(creature)
-	{
-		instance = creature->GetInstanceScript();
-	}
-
-	InstanceScript* instance;
-	EventMap events;
-
-	void Reset()
-	{
-		me->GetMotionMaster()->MoveTargetedHome();
-		events.Reset();
-	}
-
-	void EnterCombat(Unit* /*who*/)
-	{
-		//events.ScheduleEvent(EVENT_TEST, urand(10000,12000));
-	}
-
-	/*void UpdateAI(const uint32 diff)
-	{
-	if (!UpdateVictim() || me->HasUnitState(UNIT_STAT_CASTING))
-	return;
-
-	events.Update(diff);
-
-	while (uint32 eventId = events.ExecuteEvent())
-	{
-	switch (eventId)
-	{
-
-	case EVENT_TEST:
-	DoCastVictim(SPELL_ENFEEBLING_BLOW);
-	events.ScheduleEvent(EVENT_ENFEEBLING_BLOW, urand(19000,24000));
-	break;
-
-	default:
-	break;
-	}
-	}		
-
-	DoMeleeAttackIfReady();
-	}*/
-
-	void nextPhase()
-	{
-		//uint32 phase = instance->GetData(DATA_ASCENDANT_PHASE);
-
-		if(me->GetEntry() == BOSS_FELUDIUS || me->GetEntry() == BOSS_IGNACIOUS)
-		{
-			//Creature* otherAscendant = Unit::GetCreature(*me, instance->GetData64(me->GetEntry() == BOSS_FELUDIUS ? DATA_IGNACIOUS : DATA_FELUDIUS));
-
-			// Stores the Health of Both Ascendants
-			//instance->SetData(DATA_ASCENDANT_MONSTROSITY_LIVE,200+me->GetHealthPct()+otherAscendant->GetHealthPct());
-
-			// Summons Arion and Terrastra
-			me->SummonCreature(BOSS_ARION,position[0],TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,1000)->AI()->DoZoneInCombat();
-			me->SummonCreature(BOSS_TERRASTRA,position[1],TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,1000)->AI()->DoZoneInCombat();
-
-			// Unsummons the other Ascendant and me
-			//otherAscendant->SetVisible(false);
-			me->SetVisible(false);
-
-		}else
-		{ //Arion and Terrastra
-			//Summon Monstrosity and start Event
-
-			//Creature* Ascendants[4];
-
-		}
-	}
+	{-1008.82f, -582.948f, 831.901f, 0.731637f},	// ToDo Center of the Room
 };
 
 /****************
@@ -168,21 +95,45 @@ public:
 		return new boss_feludiusAI (creature);
 	}
 
-	struct boss_feludiusAI : public dummy_ascendant_AI
+	struct boss_feludiusAI : public ScriptedAI
 	{
-		boss_feludiusAI(Creature* creature) : dummy_ascendant_AI(creature)
+		boss_feludiusAI(Creature* creature) : ScriptedAI(creature)
 		{
 			instance = creature->GetInstanceScript();
+
+			Ascendants[0]= creature;
+
+			DespawnCreatures(BOSS_IGNACIOUS);
+			Ascendants[1] = Ignacious = me->SummonCreature(BOSS_IGNACIOUS,position[0],TEMPSUMMON_MANUAL_DESPAWN);
+			
+			DespawnMinions();
 		}
 
 		InstanceScript* instance;
 		uint8 phase;
+		EventMap events;
+
+		uint8 AscentInTheMiddle;
+
+		Creature* Ignacious;
+		Creature* Arion;
+		Creature* Terrestra;
+
+		Creature* Ascendants[4];
 
 		void Reset()
 		{
+			if(Ignacious->isDead())
+				Ignacious->Respawn();
+
+			me->SetVisible(true);			
+			me->SetReactState(REACT_AGGRESSIVE);
+			me->GetMotionMaster()->MoveTargetedHome();
+			me->RemoveFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE);
+
 			phase = 1;
+
 			//instance->SetData(DATA_ASCENDANT_PHASE, 1);
-			me->SetVisible(true);
 			DespawnMinions();
 		}
 
@@ -193,6 +144,9 @@ public:
 
 		void EnterCombat(Unit* /*who*/)
 		{
+			if(!Ignacious->isInCombat())
+				Ignacious->CombatStart(me->getVictim(), 1.0f);
+
 			events.ScheduleEvent(EVENT_HYDROLANCE, urand(10000,12000));
 			events.ScheduleEvent(EVENT_WATER_BOMB, urand(16000,19000));
 			events.ScheduleEvent(EVENT_HEART_OF_ICE, urand(10000,12000));
@@ -201,14 +155,75 @@ public:
 
 		void UpdateAI(const uint32 diff)
 		{
-			if (!UpdateVictim() || me->HasUnitState(UNIT_STAT_CASTING))
+			if (me->HasUnitState(UNIT_STAT_CASTING) || (!me->isInCombat()))
 				return;
 
-			if(me->GetHealthPct() < 25 && phase == 1)
-			{
-				nextPhase();
+			if((me->GetHealthPct() < 25 || Ignacious->GetHealthPct() < 25 ) && phase == 1)
+			{ // Switch to Arion and Terrestra Phase (2)
+
 				phase++;
+				events.Reset();
+				me->RemoveAllAuras();
+				Ignacious->RemoveAllAuras();
+
+				me->SetVisible(false);
+				Ignacious->SetVisible(false);
+
+				me->SetReactState(REACT_PASSIVE);
+				Ignacious->SetReactState(REACT_PASSIVE);
+
+				me->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE);
+				Ignacious->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE);
+
+				Ascendants[3] = Terrestra = me->SummonCreature(BOSS_TERRASTRA,position[1],TEMPSUMMON_MANUAL_DESPAWN);
+				Ascendants[2] = Arion = me->SummonCreature(BOSS_ARION,position[0],TEMPSUMMON_MANUAL_DESPAWN);
+
+			}else if(Arion && Terrestra)
+			{
+				if((Arion->GetHealthPct() < 25 || Terrestra->GetHealthPct() < 25 ) && phase == 2)
+				{ // Switch to Monstrosity Phase (3)
+
+					phase++;
+
+					for(uint8 i = 0; i<=3;i++)
+					{
+						Ascendants[i]->RemoveAllAuras();
+						Ascendants[i]->SetVisible(true);
+						Ascendants[i]->SetReactState(REACT_PASSIVE);
+						Ascendants[i]->AttackStop();
+						Ascendants[i]->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_NON_ATTACKABLE);
+
+						Ascendants[i]->NearTeleportTo(position[i+1].GetPositionX(),position[i+1].GetPositionY(),position[i+1].GetPositionZ(),position[i+1].GetOrientation());
+					}
+
+					AscentInTheMiddle = 0;
+					events.ScheduleEvent(EVENT_EVENT_GO_IN_DELAY, 2200);
+
+				}else if(phase == 3)
+				{ // Phase 3 for Event
+
+					events.Update(diff);
+
+					while (uint32 eventId = events.ExecuteEvent())
+					{
+						switch (eventId)
+						{
+						case EVENT_EVENT_GO_IN_DELAY:			
+
+							Ascendants[AscentInTheMiddle]->GetMotionMaster()->MovePoint(0,position[6]);
+
+							AscentInTheMiddle++;
+
+							if(AscentInTheMiddle != 4)
+								events.ScheduleEvent(EVENT_EVENT_GO_IN_DELAY, 2200);
+							break;
+						}
+					}
+				}
 			}
+
+			if(phase > 1 || !UpdateVictim())
+				return;
 
 			events.Update(diff);
 
@@ -261,10 +276,12 @@ public:
 
 		inline void DespawnMinions()
 		{
+			DespawnCreatures(NPC_LEAPING_FLAMES);
+
 			DespawnCreatures(BOSS_ARION);
 			DespawnCreatures(BOSS_TERRASTRA);
-
-			DespawnCreatures(NPC_LEAPING_FLAMES);
+			
+			Arion = Terrestra = Ascendants[2], Ascendants[3] = NULL;
 		}
 
 		void DespawnCreatures(uint32 entry)
@@ -297,17 +314,23 @@ public:
 		return new boss_ignaciousAI (creature);
 	}
 
-	struct boss_ignaciousAI : public dummy_ascendant_AI
+	struct boss_ignaciousAI : public ScriptedAI
 	{
-		boss_ignaciousAI(Creature* creature) : dummy_ascendant_AI(creature) {}
+		boss_ignaciousAI(Creature* creature) : ScriptedAI(creature) {}
+
+		Creature* Feludius;
+		EventMap events;
 
 		void Reset()
 		{
-			me->SetVisible(true);
+
 		}
 
 		void EnterCombat(Unit* /*who*/)
 		{
+			if(!Feludius->isInCombat())
+				Feludius->CombatStart(me->getVictim(), 1.0f);
+
 			events.ScheduleEvent(EVENT_BUNRING_BLOOD, urand(31000,33000));
 			events.ScheduleEvent(EVENT_FLAME_TORRENT, urand(10000,12000));
 			events.ScheduleEvent(EVENT_AEGIS_OF_FLAME, urand(54000,57000));
@@ -316,11 +339,8 @@ public:
 
 		void UpdateAI(const uint32 diff)
 		{
-			if (!UpdateVictim() || me->HasUnitState(UNIT_STAT_CASTING))
+			if (!UpdateVictim() || me->HasUnitState(UNIT_STAT_CASTING) || me->GetReactState()==REACT_PASSIVE)
 				return;
-
-			if(me->GetHealthPct() < 25)
-				nextPhase();
 
 			events.Update(diff);
 
@@ -360,6 +380,11 @@ public:
 			}		
 
 			DoMeleeAttackIfReady();
+		}
+
+		void IsSummonedBy(Unit* summoner)
+		{
+			Feludius = summoner->ToCreature();
 		}
 	};
 };
@@ -627,7 +652,7 @@ public:
 	{
 		PrepareAuraScript(spell_heart_of_ice_AuraScript)
 
-		bool Validate(SpellEntry const * /*spellEntry*/)
+			bool Validate(SpellEntry const * /*spellEntry*/)
 		{
 			if (!sSpellStore.LookupEntry(SPELL_HEART_OF_ICE))
 				return false;
