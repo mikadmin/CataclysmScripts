@@ -18,7 +18,8 @@
 enum Spells
 {
 	// Anshal
-
+	SPELL_SOOTHING__BREEZE = 86205,
+	SPELL_SOOTHING_BREEZE_VISUAL = 86208,
 	// Nezir
 	SPELL_ICE_PATCH = 93130,
 	SPELL_ICE_PATCH_VISUAL = 86107,
@@ -142,7 +143,6 @@ public:
 		void Reset()
 		{
 			events.Reset();
-
 			me->GetMotionMaster()->MoveTargetedHome();
 		}
 
@@ -239,6 +239,9 @@ public:
 		void EnterCombat(Unit* /*who*/)
 		{
 			//events.ScheduleEvent(EVENT_TEST, urand(10000,12000));
+
+										
+			me->GetMap()->Update(0);
 		}
 
 		void UpdateAI(const uint32 diff)

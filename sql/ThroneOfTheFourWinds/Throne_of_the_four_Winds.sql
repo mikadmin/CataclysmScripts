@@ -5,7 +5,7 @@
 DELETE FROM `gameobject` WHERE `map` = 754;
 
 REPLACE INTO `gameobject_template` (`entry`, `type`, `displayId`, `name`, `IconName`, `castBarCaption`, `unk1`, `faction`, `flags`, `size`, `questItem1`, `questItem2`, `questItem3`, `questItem4`, `questItem5`, `questItem6`, `data0`, `data1`, `data2`, `data3`, `data4`, `data5`, `data6`, `data7`, `data8`, `data9`, `data10`, `data11`, `data12`, `data13`, `data14`, `data15`, `data16`, `data17`, `data18`, `data19`, `data20`, `data21`, `data22`, `data23`, `data24`, `data25`, `data26`, `data27`, `data28`, `data29`, `data30`, `data31`, `AIName`, `ScriptName`, `WDBVerified`)
-VALUES (207737, 11, 10369, 'Skywall Raid Center Platform', '', '', '', 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '', '', 1);
+VALUES (207737, 14, 10369, 'Skywall Raid Center Platform', '', '', '', 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '', '', 1);
 
 -- Spawns the NPCS
 DELETE FROM `creature` WHERE `map` = 754;
@@ -19,7 +19,7 @@ INSERT INTO `creature` (`id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equip
 (45872, 754, 15, 1, 0, 0, -52.8208, 577.173, 198.456, 1.56596, 300, 0, 0, 4294600, 0, 0, 0, 0, 0, 0),
 
 -- Al'Akir
-(46753, 754, 15, 1, 0, 0, -50.4909, 815.868, 189.984, 3.11662, 300, 0, 0, 4294600, 0, 0, 0, 0, 0, 0);
+(46753, 754, 15, 1, 0, 0, -50.4909, 815.868, 189.984, 3.944043, 300, 0, 0, 4294600, 0, 0, 0, 0, 0, 0);
 
 -- Slipstream fix
 
@@ -29,19 +29,26 @@ VALUES (89501, 87740, 0, 'Throne of the four Winds no fall damage buff on entern
 
 UPDATE `creature_template` SET `ScriptName`='npc_slipstream_raid', `InhabitType`=7 WHERE `entry`=47066 LIMIT 1;
 
+-- REPLACE INTO `creature_template_addon` (`entry`, `path_id`, `mount`, `bytes1`, `bytes2`, `emote`, `auras`)
+-- VALUES (47066, 0, 0, 0, 0, 0, '85021 0');
+
 -- Spawn
+
 INSERT INTO `creature` (`id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `DeathState`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`) VALUES
-(47066, 754, 15, 1, 0, 0, -240.017761,866.768616,195.846222,0.767140, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, -240.017761,866.768616,198,0.767140, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
 (47066, 754, 15, 1, 0, 0, -97.587189,1005.306580,195.847305,3.917370, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
-(47066, 754, 15, 1, 0, 0, -157.869171,946.417114,197.842194,0.774845, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
-(47066, 754, 15, 1, 0, 0, -123.714462,979.996765,197.894104,0.774845, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
 (47066, 754, 15, 1, 0, 0, 138.357468,764.759705,195.846069,3.913764, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
 (47066, 754, 15, 1, 0, 0, -3.720205,626.373230,195.845993,0.790134, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
 (47066, 754, 15, 1, 0, 0, -101.664581, 626.800537,195.846130, 2.354747, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
-(47066, 754, 15, 1, 0, 0, 135.816025, 762.667358, 198.312805, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0);
+(47066, 754, 15, 1, 0, 0, 144.375626,857.300720,198.456482,5.461370,300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, -240.155716,769.057251,195.845795,5.507029,300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, 2.935527,1010.022034,197.690903, 5.459484,300, 0, 0, 42, 0, 0, 0, 0, 0, 0);
 
 UPDATE `creature_template` SET `InhabitType`=7, `faction_A`=14, `faction_H`=14
 WHERE `entry` IN (45870, 45871, 45872, 46753) LIMIT 5;
+
+-- Fixes Djing Effect objects
+UPDATE `gameobject_template` SET `type`=14 WHERE `entry`IN (206699, 206700, 206701);
 
 INSERT INTO `gameobject` (`id`, `map`, `spawnMask`, `phaseMask`, `position_x`, `position_y`, `position_z`, `orientation`, `rotation0`, `rotation1`, `rotation2`, `rotation3`, `spawntimesecs`, `animprogress`, `state`) VALUES
 -- Raid Platform
@@ -66,6 +73,15 @@ INSERT INTO `gameobject` (`id`, `map`, `spawnMask`, `phaseMask`, `position_x`, `
 (207340, 1, 1, 1, -11359.2, 68.8634, 723.883, 1.897836, 0, 0, 0.802365, 0.596834, 300, 0, 1),
 -- 25H
 (207342, 1, 1, 1, -11359.2, 68.8634, 723.883, 1.897836, 0, 0, 0.802365, 0.596834, 300, 0, 1),*/
+
+(207930, 754, 15, 1, -247.607, 776.485, 198.458, 2.35754, 0, 0, 0.924137, 0.38206, 300, 0, 1),
+(207929, 754, 15, 1, -94.2481, 619.219, 198.458, 5.50306, 0, 0, 0.380245, -0.924886, 300, 0, 1),
+(207928, 754, 15, 1, -11.2602, 618.869, 198.458, 3.93226, 0, 0, 0.922867, -0.385118, 300, 0, 1),
+(207927, 754, 15, 1, 146.138, 772.356, 198.458, 0.826014, 0, 0, 0.401365, 0.915918, 300, 0, 1),
+(207926, 754, 15, 1, 146.203, 855.315, 198.458, 5.49834, 0, 0, 0.382429, -0.923985, 300, 0, 1),
+(207925, 754, 15, 1, -7.08924, 1012.53, 198.458, 2.3489, 0, 0, 0.922478, 0.386049, 300, 0, 1),
+(207924, 754, 15, 1, -90.0826, 1012.85, 198.458, 0.772608, 0, 0, 0.376767, 0.926308, 300, 0, 1),
+(207923, 754, 15, 1, -247.379, 859.524, 198.458, 3.92598, 0, 0, 0.924073, -0.382215, 300, 0, 1),
 
 
 -- In Instance
