@@ -66,6 +66,8 @@ public:
 		boss_anshalAI(Creature* creature) : ScriptedAI(creature)
 		{
 			instance = creature->GetInstanceScript();
+
+			creature->setPowerType(POWER_ENERGY);
 		}
 
 		InstanceScript* instance;
@@ -81,7 +83,7 @@ public:
 		void EnterCombat(Unit* who)
 		{
 
-			who->GetMotionMaster()->MoveJump(-256.062378f,850.749207f,198.457733f,1,5);
+			
 
 
 
@@ -130,6 +132,8 @@ public:
 		boss_nezirAI(Creature* creature) : ScriptedAI(creature)
 		{
 			instance = creature->GetInstanceScript();
+
+			creature->setPowerType(POWER_ENERGY);
 		}
 
 		InstanceScript* instance;
@@ -218,6 +222,8 @@ public:
 		boss_rohashAI(Creature* creature) : ScriptedAI(creature)
 		{
 			instance = creature->GetInstanceScript();
+
+			creature->setPowerType(POWER_ENERGY);
 		}
 
 		InstanceScript* instance;

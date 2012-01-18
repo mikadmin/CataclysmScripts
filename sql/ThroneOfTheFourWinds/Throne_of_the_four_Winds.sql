@@ -21,11 +21,13 @@ INSERT INTO `creature` (`id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equip
 -- Al'Akir
 (46753, 754, 15, 1, 0, 0, -50.4909, 815.868, 189.984, 3.11662, 300, 0, 0, 4294600, 0, 0, 0, 0, 0, 0);
 
+-- Slipstream fix
+
 -- Stream spell cast non fall damage buff too
 REPLACE INTO `spell_linked_spell` (`spell_trigger`, `spell_effect`, `type`, `comment`)
 VALUES (89501, 87740, 0, 'Throne of the four Winds no fall damage buff on enterning slipstream');
 
-
+UPDATE `creature_template` SET `ScriptName`='npc_slipstream_raid' WHERE `entry`=47066 LIMIT 1;
 
 -- Creature Template fix
 UPDATE `creature_template` SET `InhabitType`=7, `faction_A`=14, `faction_H`=14
@@ -58,13 +60,13 @@ INSERT INTO `gameobject` (`id`, `map`, `spawnMask`, `phaseMask`, `position_x`, `
 
 -- In Instance
 -- 10N
-(207339, 754, 15, 1, -319.236, 814.702, 198.405, 3.1866, 0, 0, 0.999747, -0.0225, 300, 0, 1),
+(207339, 754, 15, 1, -324.068604, 817.825256, 198.405,6.280360, 0, 0, 0.999747, -0.0225, 300, 0, 1),
 -- 25N
-(207341, 754, 15, 1, -319.236, 814.702, 198.405, 3.1866, 0, 0, 0.999747, -0.0225, 300, 0, 1),
+(207341, 754, 15, 1, -324.068604, 817.825256, 198.405,6.280360, 0, 0, 0.999747, -0.0225, 300, 0, 1),
 -- 10H
-(207340, 754, 15, 1, -319.236, 814.702, 198.405, 3.1866, 0, 0, 0.999747, -0.0225, 300, 0, 1),
+(207340, 754, 15, 1, -324.068604, 817.825256, 198.405,6.280360, 0, 0, 0.999747, -0.0225, 300, 0, 1),
 -- 25H
-(207342, 754, 15, 1, -319.236, 814.702, 198.405, 3.1866, 0, 0, 0.999747, -0.0225, 300, 0, 1);	
+(207342, 754, 15, 1, -324.068604, 817.825256, 198.405,6.280360, 0, 0, 0.999747, -0.0225, 300, 0, 1);	
 
 REPLACE INTO `instance_template` (`map`, `parent`, `startLocX`, `startLocY`, `startLocZ`, `startLocO`, `script`, `allowMount`)
 VALUES (754, 0, NULL, NULL, NULL, NULL, 'instance_throne_of_the_four_winds', 1);
