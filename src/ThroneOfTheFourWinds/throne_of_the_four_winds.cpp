@@ -66,11 +66,14 @@ public:
 			SlipstreamPosition = 8;
 
 			for(uint8 i = 0; i<=7; i++)
-				if(me->GetDistance2d(SlipstreamPositions[i].GetPositionX(), SlipstreamPositions[i].GetPositionY()) < 6)
-					SlipstreamPosition = i;
+				if(me->GetDistance2d(SlipstreamPositions[i].GetPositionX(), SlipstreamPositions[i].GetPositionY()) < 10)
+					{
+						SlipstreamPosition = i;
+						break;
+					}
 
 			if(SlipstreamPosition == DIR_ERROR)
-				me->DespawnOrUnsummon();
+				return;
 
 			SlipstreamPosition += (SlipstreamPosition == DIR_WEST_TO_SOUTH || SlipstreamPosition == DIR_NORTH_TO_WEST ||
 				SlipstreamPosition == DIR_EAST_TO_NORTH || SlipstreamPosition == DIR_SOUTH_TO_EAST ) ? 1 : -1;
@@ -85,13 +88,14 @@ public:
 
 		void MoveInLineOfSight(Unit* who)
         {
-			if((!who->HasAura(SPELL_SLIPSTREAM_BUFF)) && who->GetDistance(me)<4)
-			{
-				me->CastSpell(who,SPELL_SLIPSTREAM_BUFF, true);
-				who->CastSpell(who,SPELL_SLIPSTREAM_PLAYER_VISUAL, true);
-				who->GetMotionMaster()->MoveJump(SlipstreamPositions[SlipstreamPosition].GetPositionX(),SlipstreamPositions[SlipstreamPosition].GetPositionY(),198.458481f,1,6);
+			if(SlipstreamPosition == DIR_ERROR)
+				return;
 
-				//who->GetMotionMaster()->MoveJump(-256.062378f,850.749207f,198.457733f,1,5);
+			if((!who->HasAura(SPELL_SLIPSTREAM_BUFF)) && who->GetExactDist(me) <= 3.f)
+			{
+				//me->CastSpell(who,SPELL_SLIPSTREAM_BUFF, true);
+				//who->CastSpell(who,SPELL_SLIPSTREAM_PLAYER_VISUAL, true);
+				who->GetMotionMaster()->MoveJump(SlipstreamPositions[SlipstreamPosition].GetPositionX(),SlipstreamPositions[SlipstreamPosition].GetPositionY(),198.458481f,1,6);
 			}
         }
     };

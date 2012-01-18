@@ -27,9 +27,19 @@ INSERT INTO `creature` (`id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equip
 REPLACE INTO `spell_linked_spell` (`spell_trigger`, `spell_effect`, `type`, `comment`)
 VALUES (89501, 87740, 0, 'Throne of the four Winds no fall damage buff on enterning slipstream');
 
-UPDATE `creature_template` SET `ScriptName`='npc_slipstream_raid' WHERE `entry`=47066 LIMIT 1;
+UPDATE `creature_template` SET `ScriptName`='npc_slipstream_raid', `InhabitType`=7 WHERE `entry`=47066 LIMIT 1;
 
--- Creature Template fix
+-- Spawn
+INSERT INTO `creature` (`id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `DeathState`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`) VALUES
+(47066, 754, 15, 1, 0, 0, -240.017761,866.768616,195.846222,0.767140, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, -97.587189,1005.306580,195.847305,3.917370, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, -157.869171,946.417114,197.842194,0.774845, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, -123.714462,979.996765,197.894104,0.774845, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, 138.357468,764.759705,195.846069,3.913764, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, -3.720205,626.373230,195.845993,0.790134, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, -101.664581, 626.800537,195.846130, 2.354747, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, 135.816025, 762.667358, 198.312805, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0);
+
 UPDATE `creature_template` SET `InhabitType`=7, `faction_A`=14, `faction_H`=14
 WHERE `entry` IN (45870, 45871, 45872, 46753) LIMIT 5;
 
