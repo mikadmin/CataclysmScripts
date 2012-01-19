@@ -15,6 +15,11 @@
 * with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/**********
+* Script Coded by Naios (2012)
+* Script is 100% Complete (or less)
+**********/
+
 #include "ScriptPCH.h"
 #include "throne_of_the_four_winds.h"
 
@@ -62,6 +67,8 @@ public:
 	{
 		npc_slipstream_raidAI(Creature* creature) : ScriptedAI(creature)
 		{
+			creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_NOT_SELECTABLE);
+
 			SlipstreamPosition = 8;
 
 			for(uint8 i = 0; i<=7; i++)
@@ -71,7 +78,7 @@ public:
 					break;
 				}
 
-				if(SlipstreamPosition == DIR_ERROR)
+				if(SlipstreamPosition >= DIR_ERROR)
 					return;
 
 				SlipstreamPosition += (SlipstreamPosition == DIR_WEST_TO_SOUTH || SlipstreamPosition == DIR_NORTH_TO_WEST ||
@@ -82,17 +89,18 @@ public:
 
 		void MoveInLineOfSight(Unit* who)
 		{
-			if(SlipstreamPosition == DIR_ERROR || who->GetTypeId() != TYPEID_PLAYER)
+			if(SlipstreamPosition >= DIR_ERROR || who->GetTypeId() != TYPEID_PLAYER)
 				return;
 
-			if((!who->HasAura(SPELL_SLIPSTREAM_BUFF)) && who->GetExactDist(me) <= 3.f)
+			if(who->GetExactDist(me) <= 5.f)
 			{
 				me->AddAura(SPELL_SLIPSTREAM_BUFF,who);
-				//who->GetAura(SPELL_SLIPSTREAM_BUFF)->SetDuration(7000);
+				me->AddAura(SPELL_SLIPSTREAM_PLAYER_VISUAL,who);
 
-				who->CastSpell(who,SPELL_SLIPSTREAM_PLAYER_VISUAL, true);
-
+				// if we use the motion master only to relocate the player
+				// it will be the cause bugs
 				who->SetPosition(SlipstreamPositions[SlipstreamPosition],false);
+
 				who->GetMotionMaster()->MoveJump(SlipstreamPositions[SlipstreamPosition].GetPositionX(),SlipstreamPositions[SlipstreamPosition].GetPositionY(),198.458481f,1,6);
 			}
 		}
