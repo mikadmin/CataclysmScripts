@@ -15,6 +15,7 @@
 * with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "ScriptPCH.h"
 #include "throne_of_the_four_winds.h"
 
 enum SlipstreamEnums
@@ -86,8 +87,12 @@ public:
 
 			if((!who->HasAura(SPELL_SLIPSTREAM_BUFF)) && who->GetExactDist(me) <= 3.f)
 			{
-				me->CastSpell(who,SPELL_SLIPSTREAM_BUFF, true);
+				me->AddAura(SPELL_SLIPSTREAM_BUFF,who);
+				//who->GetAura(SPELL_SLIPSTREAM_BUFF)->SetDuration(7000);
+
 				who->CastSpell(who,SPELL_SLIPSTREAM_PLAYER_VISUAL, true);
+
+				who->SetPosition(SlipstreamPositions[SlipstreamPosition],false);
 				who->GetMotionMaster()->MoveJump(SlipstreamPositions[SlipstreamPosition].GetPositionX(),SlipstreamPositions[SlipstreamPosition].GetPositionY(),198.458481f,1,6);
 			}
 		}

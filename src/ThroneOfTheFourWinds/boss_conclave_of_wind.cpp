@@ -146,7 +146,7 @@ public:
 			me->GetMotionMaster()->MoveTargetedHome();
 		}
 
-		void EnterCombat(Unit* /*who*/)
+		void EnterCombat(Unit* who)
 		{
 			events.ScheduleEvent(EVENT_ICE_PATCH, urand(10000,12000));
 			events.ScheduleEvent(EVENT_PERMAFROST, urand(20000,23000));
@@ -236,12 +236,9 @@ public:
 			me->GetMotionMaster()->MoveTargetedHome();
 		}
 
-		void EnterCombat(Unit* /*who*/)
+		void EnterCombat(Unit* who)
 		{
 			//events.ScheduleEvent(EVENT_TEST, urand(10000,12000));
-
-										
-			me->GetMap()->Update(0);
 		}
 
 		void UpdateAI(const uint32 diff)

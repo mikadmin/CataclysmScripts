@@ -35,7 +35,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_slipstream_raid', `InhabitType`
 -- Spawn
 
 INSERT INTO `creature` (`id`, `map`, `spawnMask`, `phaseMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `DeathState`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`) VALUES
-(47066, 754, 15, 1, 0, 0, -240.017761,866.768616,198,0.767140, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
+(47066, 754, 15, 1, 0, 0, -240.017761,866.768616,195.847305,0.767140, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
 (47066, 754, 15, 1, 0, 0, -97.587189,1005.306580,195.847305,3.917370, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
 (47066, 754, 15, 1, 0, 0, 138.357468,764.759705,195.846069,3.913764, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
 (47066, 754, 15, 1, 0, 0, -3.720205,626.373230,195.845993,0.790134, 300, 0, 0, 42, 0, 0, 0, 0, 0, 0),
