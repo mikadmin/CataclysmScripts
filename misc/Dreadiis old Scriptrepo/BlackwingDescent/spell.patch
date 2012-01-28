@@ -1,0 +1,10 @@
+TxT SpellMgr.cpp
+@@ Crachat de magma @@
++        case 78068:                             // Crachat de magma
++            spellInfo->MaxAffectedTargets = 3; // En 10 joueurs
++            count++;
++            break;
++        case 91917:                             // Crachat de magma
++            spellInfo->MaxAffectedTargets = 8; // En 25 joueurs
++            count++;
++            break;
